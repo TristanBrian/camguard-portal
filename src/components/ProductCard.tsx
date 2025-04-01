@@ -61,7 +61,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <h3 className="text-lg font-semibold text-gray-900 truncate">{name}</h3>
         <p className="text-gray-600 text-sm mt-1 h-10 overflow-hidden">{description}</p>
         <div className="mt-3 flex justify-between items-center">
-          <div className="text-xl font-bold text-kimcom-700">${price.toFixed(2)}</div>
+          <div className="text-xl font-bold text-kimcom-700">KSh {price.toLocaleString()}</div>
           <div className="flex space-x-2">
             <Button 
               variant="ghost" 
