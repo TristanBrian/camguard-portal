@@ -10,6 +10,7 @@ import Services from "./pages/Services";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Admin from "./pages/Admin";
+import AdminLogin from "./pages/AdminLogin";
 import ProductManager from "./pages/admin/ProductManager";
 import Statistics from "./pages/admin/Statistics";
 import MarketTrends from "./pages/admin/MarketTrends";
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/services" element={<Services />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/products" element={<ProductManager />} />
           <Route path="/admin/statistics" element={<Statistics />} />

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Menu, X, ShieldCheck, ShoppingCart, Phone } from 'lucide-react';
+import { Menu, X, ShieldCheck, ShoppingCart, Phone, Lock } from 'lucide-react';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -52,6 +52,12 @@ const Navbar = () => {
               <ShoppingCart className="h-4 w-4" />
               <span>Shop Now</span>
             </Button>
+            <Link to="/admin-login">
+              <Button variant="ghost" size="sm" className="flex items-center gap-1 text-gray-600 hover:text-kimcom-600">
+                <Lock className="h-4 w-4" />
+                <span>Admin</span>
+              </Button>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -106,6 +112,13 @@ const Navbar = () => {
               onClick={() => setIsMenuOpen(false)}
             >
               Contact
+            </Link>
+            <Link
+              to="/admin-login"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Admin
             </Link>
             <div className="flex flex-col space-y-2 pt-4">
               <Button variant="outline" size="sm" className="flex items-center justify-center gap-1">
