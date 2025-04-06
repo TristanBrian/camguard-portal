@@ -1,329 +1,456 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Separator } from '@/components/ui/separator';
-import { toast } from 'sonner';
-import { User, Lock, Building, Mail, Phone, Globe, MapPin } from 'lucide-react';
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-
-const profileFormSchema = z.object({
-  companyName: z.string().min(2, {
-    message: "Company name must be at least 2 characters.",
-  }),
-  email: z.string().email({
-    message: "Please enter a valid email address.",
-  }),
-  phone: z.string().min(10, {
-    message: "Phone number must be at least 10 characters.",
-  }),
-  address: z.string().min(5, {
-    message: "Address must be at least 5 characters.",
-  }),
-  website: z.string().url({
-    message: "Please enter a valid URL.",
-  }),
-  tagline: z.string().min(10, {
-    message: "Tagline must be at least 10 characters.",
-  }),
-});
-
-const passwordFormSchema = z.object({
-  currentPassword: z.string().min(8, {
-    message: "Password must be at least 8 characters.",
-  }),
-  newPassword: z.string().min(8, {
-    message: "Password must be at least 8 characters.",
-  }),
-  confirmPassword: z.string().min(8, {
-    message: "Password must be at least 8 characters.",
-  }),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
-
-type ProfileFormValues = z.infer<typeof profileFormSchema>;
-type PasswordFormValues = z.infer<typeof passwordFormSchema>;
-
-// Demo data
-const defaultValues: ProfileFormValues = {
-  companyName: "KimCom Solutions",
-  email: "info@kimcom.co.ke",
-  phone: "+254 722 123 456",
-  address: "Nairobi, Kenya",
-  website: "https://kimcom.co.ke",
-  tagline: "Innovative Technology Solutions for Kenya",
-};
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertCircle, CheckCircle2, Lock, Mail, ShieldCheck, User, Globe, Bell, LogOut, Smartphone } from "lucide-react";
+import { toast } from "sonner";
 
 const AdminSettings: React.FC = () => {
-  const [isLoading, setIsLoading] = useState(false);
-
-  const profileForm = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
-    defaultValues,
-    mode: "onChange",
+  const [loading, setLoading] = useState(false);
+  // General settings
+  const [generalSettings, setGeneralSettings] = useState({
+    storeName: "KimCom Electronics",
+    email: "admin@kimcom.com",
+    phone: "+254 123 456 789",
+    address: "Nairobi, Kenya",
+    currency: "KSH",
   });
 
-  const passwordForm = useForm<PasswordFormValues>({
-    resolver: zodResolver(passwordFormSchema),
-    defaultValues: {
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    },
-    mode: "onChange",
+  // Notification settings
+  const [notifications, setNotifications] = useState({
+    emailAlerts: true,
+    orderNotifications: true,
+    stockAlerts: true,
+    marketingEmails: false,
+    securityAlerts: true,
   });
 
-  const onProfileSubmit = (data: ProfileFormValues) => {
-    setIsLoading(true);
-    
-    // In a real app, this would call an API to update the profile
+  // Security settings
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const handleGeneralSettingsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setGeneralSettings(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleNotificationToggle = (key: keyof typeof notifications) => {
+    setNotifications(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const handleCurrencyChange = (value: string) => {
+    setGeneralSettings(prev => ({
+      ...prev,
+      currency: value
+    }));
+  };
+
+  const saveGeneralSettings = () => {
+    setLoading(true);
+    // Simulating API call
     setTimeout(() => {
-      toast.success('Profile updated successfully!');
-      setIsLoading(false);
+      setLoading(false);
+      toast.success("General settings updated successfully");
     }, 1000);
   };
 
-  const onPasswordSubmit = (data: PasswordFormValues) => {
-    setIsLoading(true);
-    
-    // In a real app, this would call an API to update the password
+  const saveNotificationSettings = () => {
+    setLoading(true);
+    // Simulating API call
     setTimeout(() => {
-      toast.success('Password changed successfully!');
-      passwordForm.reset();
-      setIsLoading(false);
+      setLoading(false);
+      toast.success("Notification preferences updated successfully");
     }, 1000);
+  };
+
+  const changePassword = () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error("All password fields are required");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error("New passwords don't match");
+      return;
+    }
+
+    setLoading(true);
+    // Simulating API call
+    setTimeout(() => {
+      setLoading(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Password changed successfully");
+    }, 1500);
+  };
+
+  const enableTwoFactor = () => {
+    setLoading(true);
+    // Simulating API call
+    setTimeout(() => {
+      setLoading(false);
+      setTwoFactorEnabled(true);
+      toast.success("Two-factor authentication enabled");
+    }, 1500);
+  };
+
+  const disableTwoFactor = () => {
+    setLoading(true);
+    // Simulating API call
+    setTimeout(() => {
+      setLoading(false);
+      setTwoFactorEnabled(false);
+      toast.success("Two-factor authentication disabled");
+    }, 1500);
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-3xl font-bold tracking-tight">Settings</h3>
+        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground">
-          Manage your account settings and website preferences.
+          Manage your account settings and preferences
         </p>
       </div>
-      
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full md:w-[400px] grid-cols-2">
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="password">Password</TabsTrigger>
+
+      <Tabs defaultValue="general">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="profile" className="mt-6">
+        <TabsContent value="general" className="space-y-4 pt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Company Profile</CardTitle>
+              <CardTitle>General Settings</CardTitle>
               <CardDescription>
-                Update your company information and public display settings
+                Update your store information and preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="storeName">Store Name</Label>
+                <Input
+                  id="storeName"
+                  name="storeName"
+                  value={generalSettings.storeName}
+                  onChange={handleGeneralSettingsChange}
+                />
+              </div>
+              
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={generalSettings.email}
+                    onChange={handleGeneralSettingsChange}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    value={generalSettings.phone}
+                    onChange={handleGeneralSettingsChange}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Textarea
+                  id="address"
+                  name="address"
+                  value={generalSettings.address}
+                  onChange={handleGeneralSettingsChange}
+                  rows={3}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="currency">Default Currency</Label>
+                <Select
+                  value={generalSettings.currency}
+                  onValueChange={handleCurrencyChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="KSH">Kenyan Shilling (KSH)</SelectItem>
+                    <SelectItem value="USD">US Dollar (USD)</SelectItem>
+                    <SelectItem value="EUR">Euro (EUR)</SelectItem>
+                    <SelectItem value="GBP">British Pound (GBP)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={saveGeneralSettings} disabled={loading}>
+                {loading ? "Saving..." : "Save Changes"}
+              </Button>
+            </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Account Management</CardTitle>
+              <CardDescription>
+                Manage your account status
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Form {...profileForm}>
-                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
-                  <FormField
-                    control={profileForm.control}
-                    name="companyName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company Name</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Building className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                            <Input placeholder="Your company name" className="pl-10" {...field} />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={profileForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Mail className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                              <Input placeholder="Email" className="pl-10" {...field} />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={profileForm.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Phone className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                              <Input placeholder="Phone number" className="pl-10" {...field} />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 rounded-full bg-red-100">
+                    <LogOut className="h-5 w-5 text-red-600" />
                   </div>
-                  
-                  <FormField
-                    control={profileForm.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Address</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <MapPin className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                            <Input placeholder="Address" className="pl-10" {...field} />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={profileForm.control}
-                    name="website"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Website</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Globe className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                            <Input placeholder="Website URL" className="pl-10" {...field} />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={profileForm.control}
-                    name="tagline"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company Tagline</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Tagline or motto" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          A short slogan that describes your business
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <Button type="submit" className="w-full md:w-auto" disabled={isLoading}>
-                    {isLoading ? "Saving..." : "Save Changes"}
-                  </Button>
-                </form>
-              </Form>
+                  <div>
+                    <h3 className="font-medium">Log Out From All Devices</h3>
+                    <p className="text-sm text-muted-foreground">
+                      This will log you out from all devices except your current one
+                    </p>
+                  </div>
+                </div>
+                <Button variant="destructive" onClick={() => toast.info("This would log you out from all devices")}>
+                  Log Out All
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
         
-        <TabsContent value="password" className="mt-6">
+        <TabsContent value="notifications" className="space-y-4 pt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Password</CardTitle>
+              <CardTitle>Notification Preferences</CardTitle>
               <CardDescription>
-                Change your password here. After saving, you'll be logged out.
+                Choose what notifications you receive
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Form {...passwordForm}>
-                <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
-                  <FormField
-                    control={passwordForm.control}
-                    name="currentPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Current Password</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                            <Input 
-                              placeholder="Current password" 
-                              type="password"
-                              className="pl-10" 
-                              {...field} 
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={passwordForm.control}
-                    name="newPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>New Password</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                            <Input 
-                              placeholder="New password" 
-                              type="password"
-                              className="pl-10" 
-                              {...field} 
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={passwordForm.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Confirm Password</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                            <Input 
-                              placeholder="Confirm password" 
-                              type="password"
-                              className="pl-10" 
-                              {...field} 
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <Button type="submit" className="w-full md:w-auto" disabled={isLoading}>
-                    {isLoading ? "Updating..." : "Change Password"}
-                  </Button>
-                </form>
-              </Form>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 rounded-full bg-blue-100">
+                    <Mail className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Email Notifications</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Receive system emails with important updates
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={notifications.emailAlerts}
+                  onCheckedChange={() => handleNotificationToggle('emailAlerts')}
+                />
+              </div>
+              
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 rounded-full bg-green-100">
+                    <ShoppingCart className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Order Updates</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Get notified about new orders and status changes
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={notifications.orderNotifications}
+                  onCheckedChange={() => handleNotificationToggle('orderNotifications')}
+                />
+              </div>
+              
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 rounded-full bg-amber-100">
+                    <AlertCircle className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Stock Alerts</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Receive alerts when products are low or out of stock
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={notifications.stockAlerts}
+                  onCheckedChange={() => handleNotificationToggle('stockAlerts')}
+                />
+              </div>
+              
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 rounded-full bg-purple-100">
+                    <Bell className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Marketing Emails</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Receive tips, product updates and marketing emails
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={notifications.marketingEmails}
+                  onCheckedChange={() => handleNotificationToggle('marketingEmails')}
+                />
+              </div>
+              
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 rounded-full bg-red-100">
+                    <ShieldCheck className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Security Alerts</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Get important security notifications about your account
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={notifications.securityAlerts}
+                  onCheckedChange={() => handleNotificationToggle('securityAlerts')}
+                />
+              </div>
             </CardContent>
+            <CardFooter>
+              <Button onClick={saveNotificationSettings} disabled={loading}>
+                {loading ? "Saving..." : "Save Preferences"}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="security" className="space-y-4 pt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Change Password</CardTitle>
+              <CardDescription>
+                Update your account password
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="current-password">Current Password</Label>
+                <Input
+                  id="current-password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
+              </div>
+              
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">New Password</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm New Password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={changePassword} disabled={loading}>
+                {loading ? "Updating..." : "Update Password"}
+              </Button>
+            </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Two-Factor Authentication</CardTitle>
+              <CardDescription>
+                Add an extra layer of security to your account
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <div className={`p-2 rounded-full ${twoFactorEnabled ? 'bg-green-100' : 'bg-gray-100'}`}>
+                  <Smartphone className={`h-5 w-5 ${twoFactorEnabled ? 'text-green-600' : 'text-gray-600'}`} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium">Two-Factor Authentication</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {twoFactorEnabled 
+                      ? "Two-factor authentication is enabled for your account" 
+                      : "Protect your account with two-factor authentication"}
+                  </p>
+                </div>
+                <div className="flex items-center">
+                  {twoFactorEnabled ? (
+                    <>
+                      <CheckCircle2 className="mr-2 h-5 w-5 text-green-500" />
+                      <span className="text-sm font-medium text-green-500">Enabled</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="mr-2 h-5 w-5 text-gray-400" />
+                      <span className="text-sm font-medium text-gray-500">Disabled</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              {twoFactorEnabled ? (
+                <Button variant="outline" onClick={disableTwoFactor} disabled={loading}>
+                  {loading ? "Disabling..." : "Disable Two-Factor"}
+                </Button>
+              ) : (
+                <Button onClick={enableTwoFactor} disabled={loading}>
+                  {loading ? "Enabling..." : "Enable Two-Factor"}
+                </Button>
+              )}
+            </CardFooter>
           </Card>
         </TabsContent>
       </Tabs>
@@ -332,3 +459,24 @@ const AdminSettings: React.FC = () => {
 };
 
 export default AdminSettings;
+
+function ShoppingCart(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="8" cy="21" r="1" />
+      <circle cx="19" cy="21" r="1" />
+      <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+    </svg>
+  );
+}
