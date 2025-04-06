@@ -6,6 +6,7 @@ import { Home, Package, BarChart2, TrendingUp, Settings, LogOut, Shield } from '
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import AdminDashboard from '@/components/admin/AdminDashboard';
+import AdminSettings from '@/components/admin/AdminSettings';
 
 const Admin: React.FC = () => {
   const navigate = useNavigate();
@@ -19,6 +20,17 @@ const Admin: React.FC = () => {
   const handleLogout = () => {
     toast.success('Successfully logged out');
     navigate('/');
+  };
+
+  const renderContent = () => {
+    switch(selectedItem) {
+      case 'dashboard':
+        return <AdminDashboard />;
+      case 'settings':
+        return <AdminSettings />;
+      default:
+        return <AdminDashboard />;
+    }
   };
 
   return (
@@ -76,6 +88,7 @@ const Admin: React.FC = () => {
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   isActive={selectedItem === 'settings'}
+                  onClick={() => setSelectedItem('settings')}
                   tooltip="Settings"
                 >
                   <Settings className="h-5 w-5" />
@@ -96,7 +109,7 @@ const Admin: React.FC = () => {
           </SidebarFooter>
         </Sidebar>
         <SidebarInset className="p-4 md:p-6">
-          <AdminDashboard />
+          {renderContent()}
         </SidebarInset>
       </div>
     </SidebarProvider>
