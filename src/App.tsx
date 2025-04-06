@@ -17,6 +17,8 @@ import ProductManager from "./pages/admin/ProductManager";
 import Statistics from "./pages/admin/Statistics";
 import MarketTrends from "./pages/admin/MarketTrends";
 import NotFound from "./pages/NotFound";
+import AdminDashboard from "./components/admin/AdminDashboard";
+import AdminSettings from "./components/admin/AdminSettings";
 
 const queryClient = new QueryClient();
 
