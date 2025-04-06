@@ -2,6 +2,8 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, Info } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 interface ProductCardProps {
   id: string;
@@ -11,20 +13,25 @@ interface ProductCardProps {
   image: string;
   category: string;
   difficulty?: 'Easy' | 'Medium' | 'Advanced';
+  stock?: number;
   onAddToCart?: () => void;
   onViewDetails?: () => void;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
+  id,
   name,
   description,
   price,
   image,
   category,
   difficulty = 'Medium',
+  stock,
   onAddToCart,
   onViewDetails
 }) => {
+  const navigate = useNavigate();
+  
   const getDifficultyColor = () => {
     switch (difficulty) {
       case 'Easy':
@@ -37,6 +44,25 @@ const ProductCard: React.FC<ProductCardProps> = ({
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+  const handleAddToCart = () => {
+    if (onAddToCart) {
+      onAddToCart();
+    } else {
+      toast.success(`Added ${name} to cart`);
+    }
+  };
+
+  const handleViewDetails = () => {
+    if (onViewDetails) {
+      onViewDetails();
+    } else {
+      navigate(`/products?id=${id}`);
+    }
+  };
+
+  const isLowStock = stock !== undefined && stock <= 5 && stock > 0;
+  const isOutOfStock = stock !== undefined && stock === 0;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover-animate overflow-hidden">
@@ -56,6 +82,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
             {difficulty} Install
           </span>
         </div>
+        {isOutOfStock && (
+          <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+            <span className="bg-red-500 text-white px-3 py-1 rounded-full font-bold text-sm uppercase">
+              Out of Stock
+            </span>
+          </div>
+        )}
       </div>
       <div className="p-4">
         <h3 className="text-lg font-semibold text-gray-900 truncate">{name}</h3>
@@ -66,7 +99,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={onViewDetails}
+              onClick={handleViewDetails}
               className="text-gray-600 hover:text-kimcom-600"
             >
               <Info className="h-4 w-4" />
@@ -74,13 +107,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <Button 
               variant="default" 
               size="sm" 
-              onClick={onAddToCart}
+              onClick={handleAddToCart}
               className="bg-kimcom-600 hover:bg-kimcom-700"
+              disabled={isOutOfStock}
             >
               <ShoppingCart className="h-4 w-4" />
             </Button>
           </div>
         </div>
+        {isLowStock && (
+          <div className="mt-2">
+            <p className="text-xs text-red-500 font-medium">Only {stock} left in stock</p>
+          </div>
+        )}
       </div>
     </div>
   );
