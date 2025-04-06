@@ -1,22 +1,27 @@
 
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import { Button } from '@/components/ui/button';
 import { 
-  PlusCircle, 
   ArrowLeft, 
   ArrowRight,
   Filter,
-  Search
+  Search,
+  LogIn
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const Products = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // In a real app, this would come from auth context
+  
   // Sample product data - in a real app, this would come from a database
   const productsData = [
     {
@@ -104,20 +109,29 @@ const Products = () => {
     return matchesSearch && matchesCategory;
   });
 
-  // For admin functionality demo - in a real app, this would be protected
-  const handleAddProduct = () => {
-    alert('Admin functionality: Add new product form would appear here');
-    // In a real app, this would open a form or navigate to an admin page
-  };
-
   const handleViewDetails = (id: string) => {
-    alert(`Viewing details for product ${id}`);
-    // In a real app, this would navigate to a product details page
+    navigate(`/product-details/${id}`);
   };
 
   const handleAddToCart = (id: string) => {
-    alert(`Added product ${id} to cart`);
+    if (!isLoggedIn) {
+      toast.error("Please login to add items to your cart");
+      navigate('/admin-login');
+      return;
+    }
+    
+    toast.success(`Added product ${id} to cart`);
     // In a real app, this would add the product to a cart state/database
+  };
+
+  const handleCheckout = () => {
+    if (!isLoggedIn) {
+      toast.error("Please login to checkout");
+      navigate('/admin-login');
+      return;
+    }
+    
+    navigate('/checkout');
   };
 
   return (
@@ -138,15 +152,24 @@ const Products = () => {
         {/* Products section */}
         <section className="py-16 bg-gray-50">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Admin action */}
+            {/* User action */}
             <div className="mb-8 flex justify-end">
-              <Button 
-                onClick={handleAddProduct}
-                className="bg-kimcom-600 hover:bg-kimcom-700"
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add New Product
-              </Button>
+              {!isLoggedIn ? (
+                <Button 
+                  onClick={() => navigate('/admin-login')}
+                  className="bg-kimcom-600 hover:bg-kimcom-700"
+                >
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Login to Checkout
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleCheckout}
+                  className="bg-kimcom-600 hover:bg-kimcom-700"
+                >
+                  Proceed to Checkout
+                </Button>
+              )}
             </div>
 
             {/* Search and filter */}
