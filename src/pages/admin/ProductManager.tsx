@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Package, PlusCircle, Search, MoreVertical, Edit, Trash, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import ProductForm from '@/components/admin/ProductForm';
+import { useNavigate } from 'react-router-dom';
 
 // Sample product data
 const initialProducts = [
@@ -55,6 +57,7 @@ const initialProducts = [
 ];
 
 const ProductManager: React.FC = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState(initialProducts);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
@@ -72,7 +75,7 @@ const ProductManager: React.FC = () => {
     const newProduct = {
       id: Date.now().toString(),
       ...productData,
-      image: productData.image ? URL.createObjectURL(productData.image) : '/placeholder.svg',
+      image: productData.imageUrl || (productData.image ? URL.createObjectURL(productData.image) : '/placeholder.svg'),
     };
     
     setProducts([...products, newProduct]);
@@ -84,12 +87,13 @@ const ProductManager: React.FC = () => {
       product.id === editingProduct.id ? {
         ...product,
         ...productData,
-        image: productData.image ? URL.createObjectURL(productData.image) : product.image,
+        image: productData.imageUrl || (productData.image ? URL.createObjectURL(productData.image) : product.image),
       } : product
     );
     
     setProducts(updatedProducts);
     setEditingProduct(null);
+    setActiveTab('all');
     toast.success('Product updated successfully');
   };
   
@@ -212,7 +216,8 @@ const ProductManager: React.FC = () => {
                                 alt={product.name} 
                                 className="h-full w-full object-contain"
                                 onError={(e) => {
-                                  (e.target as HTMLImageElement).src = '/placeholder.svg';
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = '/placeholder.svg';
                                 }}
                               />
                             </div>

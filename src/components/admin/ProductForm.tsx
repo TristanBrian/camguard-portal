@@ -9,7 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Package, Upload, X } from 'lucide-react';
+import { Package, Upload, X, Link as LinkIcon } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 const productFormSchema = z.object({
   name: z.string().min(2, {
@@ -30,13 +32,14 @@ const productFormSchema = z.object({
   stock: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
     message: "Stock must be a non-negative number.",
   }),
+  imageUrl: z.string().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
 
 interface ProductFormProps {
-  onSubmit: (data: ProductFormValues & { image?: File }) => void;
-  initialData?: ProductFormValues;
+  onSubmit: (data: ProductFormValues & { image?: File, imageUrl?: string }) => void;
+  initialData?: ProductFormValues & { image?: string, imageUrl?: string };
   isEditing?: boolean;
 }
 
@@ -46,18 +49,21 @@ const ProductForm: React.FC<ProductFormProps> = ({
   isEditing = false 
 }) => {
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(initialData?.image || initialData?.imageUrl || null);
   const [isLoading, setIsLoading] = useState(false);
+  const [imageSource, setImageSource] = useState<'file' | 'url'>(initialData?.imageUrl ? 'url' : 'file');
+  const [imageUrl, setImageUrl] = useState(initialData?.imageUrl || '');
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
-    defaultValues: initialData || {
-      name: "",
-      price: "",
-      category: "",
-      description: "",
-      sku: "",
-      stock: ""
+    defaultValues: {
+      name: initialData?.name || "",
+      price: initialData?.price || "",
+      category: initialData?.category || "",
+      description: initialData?.description || "",
+      sku: initialData?.sku || "",
+      stock: initialData?.stock || "",
+      imageUrl: initialData?.imageUrl || "",
     },
     mode: "onChange",
   });
@@ -74,9 +80,29 @@ const ProductForm: React.FC<ProductFormProps> = ({
     }
   };
 
+  const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    setImageUrl(url);
+    if (url) {
+      setImagePreview(url);
+    } else {
+      setImagePreview(null);
+    }
+  };
+
   const clearImage = () => {
     setImageFile(null);
+    setImageUrl('');
     setImagePreview(null);
+  };
+
+  const handleImageSourceChange = (value: 'file' | 'url') => {
+    setImageSource(value);
+    if (value === 'file') {
+      setImageUrl('');
+    } else {
+      setImageFile(null);
+    }
   };
 
   const handleSubmit = (data: ProductFormValues) => {
@@ -85,10 +111,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
     // Combining form data with the image
     const submitData = {
       ...data,
-      image: imageFile || undefined
+      image: imageFile || undefined,
+      imageUrl: imageSource === 'url' ? imageUrl : undefined
     };
     
-    // In a real app, you might want to handle the file upload separately
     setTimeout(() => {
       onSubmit(submitData);
       setIsLoading(false);
@@ -205,6 +231,35 @@ const ProductForm: React.FC<ProductFormProps> = ({
               <div className="w-full md:w-1/2 flex flex-col gap-4">
                 <div>
                   <FormLabel>Product Image</FormLabel>
+                  
+                  <RadioGroup 
+                    className="flex space-x-4 mb-4" 
+                    defaultValue={imageSource} 
+                    onValueChange={(value) => handleImageSourceChange(value as 'file' | 'url')}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="file" id="file" />
+                      <Label htmlFor="file">Upload File</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="url" id="url" />
+                      <Label htmlFor="url">Image URL</Label>
+                    </div>
+                  </RadioGroup>
+                  
+                  {imageSource === 'url' && (
+                    <div className="mb-4">
+                      <div className="flex items-center">
+                        <LinkIcon className="h-4 w-4 mr-2 text-gray-400" />
+                        <Input 
+                          placeholder="https://example.com/image.jpg" 
+                          value={imageUrl} 
+                          onChange={handleImageUrlChange}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center">
                     {imagePreview ? (
                       <div className="relative w-full">
@@ -212,6 +267,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
                           src={imagePreview} 
                           alt="Product Preview" 
                           className="h-[200px] w-full object-contain object-center mx-auto"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/placeholder.svg';
+                          }}
                         />
                         <Button
                           type="button"
@@ -224,7 +283,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                           <span className="sr-only">Remove image</span>
                         </Button>
                       </div>
-                    ) : (
+                    ) : imageSource === 'file' ? (
                       <div className="p-8 text-center">
                         <Package className="h-10 w-10 mx-auto text-gray-400 mb-2" />
                         <p className="text-sm text-gray-500 mb-2">Drag and drop or click to upload</p>
@@ -246,6 +305,11 @@ const ProductForm: React.FC<ProductFormProps> = ({
                           </label>
                         </div>
                       </div>
+                    ) : (
+                      <div className="p-8 text-center">
+                        <LinkIcon className="h-10 w-10 mx-auto text-gray-400 mb-2" />
+                        <p className="text-sm text-gray-500 mb-2">Enter an image URL above</p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -259,6 +323,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
                           src={imagePreview} 
                           alt="Thumbnail" 
                           className="h-full w-full object-contain"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/placeholder.svg';
+                          }}
                         />
                       ) : (
                         <Package className="h-8 w-8 text-gray-400" />

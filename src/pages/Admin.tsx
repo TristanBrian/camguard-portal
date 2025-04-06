@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarInset } from '@/components/ui/sidebar';
+import { useNavigate, Outlet, useLocation } from 'react-router-dom';
+import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from '@/components/ui/sidebar';
 import { Home, Package, BarChart2, TrendingUp, Settings, LogOut, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -10,7 +10,16 @@ import AdminSettings from '@/components/admin/AdminSettings';
 
 const Admin: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedItem, setSelectedItem] = useState('dashboard');
+  const location = useLocation();
+  const [selectedItem, setSelectedItem] = useState(() => {
+    // Determine the selected item based on the current path
+    const path = location.pathname;
+    if (path.includes('products')) return 'products';
+    if (path.includes('statistics')) return 'statistics';
+    if (path.includes('market-trends')) return 'trends';
+    if (path.includes('settings')) return 'settings';
+    return 'dashboard';
+  });
   
   const handleNavigation = (path: string, item: string) => {
     setSelectedItem(item);
@@ -22,12 +31,19 @@ const Admin: React.FC = () => {
     navigate('/');
   };
 
+  // Determine what to render in the main content area
   const renderContent = () => {
+    // For paths that match specific routes, we'll show the <Outlet> component
+    // which will render the nested route component
+    if (location.pathname !== '/admin' && location.pathname !== '/admin/dashboard') {
+      return <Outlet />;
+    }
+    
+    // For the admin dashboard or direct /admin path, show dashboard or settings based on selection
     switch(selectedItem) {
-      case 'dashboard':
-        return <AdminDashboard />;
       case 'settings':
         return <AdminSettings />;
+      case 'dashboard':
       default:
         return <AdminDashboard />;
     }
@@ -48,7 +64,7 @@ const Admin: React.FC = () => {
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   isActive={selectedItem === 'dashboard'}
-                  onClick={() => setSelectedItem('dashboard')}
+                  onClick={() => handleNavigation('/admin/dashboard', 'dashboard')}
                   tooltip="Dashboard"
                 >
                   <Home className="h-5 w-5" />
@@ -108,9 +124,9 @@ const Admin: React.FC = () => {
             </Button>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="p-4 md:p-6">
+        <div className="flex-grow p-6 overflow-auto">
           {renderContent()}
-        </SidebarInset>
+        </div>
       </div>
     </SidebarProvider>
   );
