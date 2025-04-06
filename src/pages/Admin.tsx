@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from '@/components/ui/sidebar';
-import { Home, Package, BarChart2, TrendingUp, Settings, LogOut, Shield } from 'lucide-react';
+import { Home, Package, BarChart2, TrendingUp, Settings, LogOut, Shield, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import AdminDashboard from '@/components/admin/AdminDashboard';
@@ -104,7 +104,7 @@ const Admin: React.FC = () => {
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   isActive={selectedItem === 'settings'}
-                  onClick={() => setSelectedItem('settings')}
+                  onClick={() => handleNavigation('/admin/settings', 'settings')}
                   tooltip="Settings"
                 >
                   <Settings className="h-5 w-5" />

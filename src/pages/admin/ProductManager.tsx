@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Package, PlusCircle, Search, MoreVertical, Edit, Trash, ArrowUpDown } from 'lucide-react';
+import { Package, PlusCircle, Search, MoreVertical, Edit, Trash, ArrowUpDown, Download, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 import ProductForm from '@/components/admin/ProductForm';
 import { useNavigate } from 'react-router-dom';
@@ -80,6 +80,7 @@ const ProductManager: React.FC = () => {
     
     setProducts([...products, newProduct]);
     toast.success('Product added successfully');
+    setActiveTab('all');
   };
   
   const handleUpdateProduct = (productData: any) => {
@@ -129,6 +130,30 @@ const ProductManager: React.FC = () => {
     setActiveTab('edit');
   };
   
+  const handleExportCSV = () => {
+    // Create CSV content
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+    // Add headers
+    csvContent += "ID,Name,SKU,Category,Price,Stock,Description\n";
+    
+    // Add rows
+    products.forEach(product => {
+      csvContent += `${product.id},${product.name},${product.sku},${product.category},${product.price},${product.stock},"${product.description}"\n`;
+    });
+    
+    // Create download link
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "products.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('Products exported successfully');
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -164,6 +189,15 @@ const ProductManager: React.FC = () => {
                 onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleExportCSV}
+              className="w-full md:w-auto"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
           </div>
         </div>
         

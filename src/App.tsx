@@ -39,10 +39,11 @@ const App = () => (
           {/* Admin routes */}
           <Route path="/admin" element={<Admin />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard" element={<Admin />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="products" element={<ProductManager />} />
             <Route path="statistics" element={<Statistics />} />
             <Route path="market-trends" element={<MarketTrends />} />
+            <Route path="settings" element={<AdminSettings />} />
           </Route>
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
