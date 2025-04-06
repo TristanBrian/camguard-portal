@@ -10,94 +10,21 @@ import {
   ArrowRight,
   Filter,
   Search,
-  LogIn
+  LogIn,
+  ShoppingCart
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { productsData } from '@/data/productsData';
 
 const Products = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [isLoggedIn, setIsLoggedIn] = useState(false); // In a real app, this would come from auth context
+  const [cartItems, setCartItems] = useState<{id: string, quantity: number}[]>([]);
   
-  // Sample product data - in a real app, this would come from a database
-  const productsData = [
-    {
-      id: "p1",
-      name: "HD Dome Camera",
-      description: "1080p indoor security camera with night vision and motion detection.",
-      price: 8999,
-      image: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
-      category: "Indoor",
-      difficulty: "Easy" as const,
-    },
-    {
-      id: "p2",
-      name: "4K Bullet Camera",
-      description: "Professional 4K outdoor camera with 30m IR range and IP67 weatherproof rating.",
-      price: 15999,
-      image: "https://images.unsplash.com/photo-1531297484001-80022131f5a1",
-      category: "Outdoor",
-      difficulty: "Medium" as const,
-    },
-    {
-      id: "p3",
-      name: "8-Channel NVR",
-      description: "Network video recorder with 2TB storage and remote viewing capabilities.",
-      price: 29999,
-      image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f",
-      category: "Recorder",
-      difficulty: "Advanced" as const,
-    },
-    {
-      id: "p4",
-      name: "Mesh WiFi System",
-      description: "Whole-home coverage with seamless roaming and parental controls.",
-      price: 17999,
-      image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7",
-      category: "Networking",
-      difficulty: "Medium" as const,
-    },
-    {
-      id: "p5",
-      name: "Wireless IP Camera",
-      description: "Easy to install wireless camera with two-way audio and cloud storage.",
-      price: 6999,
-      image: "https://images.unsplash.com/photo-1518770660439-4636190af475",
-      category: "Indoor",
-      difficulty: "Easy" as const,
-    },
-    {
-      id: "p6",
-      name: "PTZ Security Camera",
-      description: "Pan-tilt-zoom camera with 360° coverage and automatic tracking.",
-      price: 24999,
-      image: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b",
-      category: "Outdoor",
-      difficulty: "Advanced" as const,
-    },
-    {
-      id: "p7",
-      name: "16-Channel DVR",
-      description: "Digital video recorder with H.265+ compression and multi-site viewing.",
-      price: 35999,
-      image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d",
-      category: "Recorder",
-      difficulty: "Advanced" as const,
-    },
-    {
-      id: "p8",
-      name: "Security Router",
-      description: "Enterprise-grade router with firewall protection and VPN capabilities.",
-      price: 12999,
-      image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158",
-      category: "Networking",
-      difficulty: "Medium" as const,
-    },
-  ];
-
   // Get unique categories for the filter
   const categories = ['All', ...new Set(productsData.map(product => product.category))];
 
@@ -114,25 +41,32 @@ const Products = () => {
   };
 
   const handleAddToCart = (id: string) => {
-    if (!isLoggedIn) {
-      toast.error("Please login to add items to your cart");
-      navigate('/admin-login');
-      return;
+    const existingItem = cartItems.find(item => item.id === id);
+    
+    if (existingItem) {
+      setCartItems(cartItems.map(item => 
+        item.id === id ? { ...item, quantity: item.quantity + 1 } : item
+      ));
+    } else {
+      setCartItems([...cartItems, { id, quantity: 1 }]);
     }
     
-    toast.success(`Added product ${id} to cart`);
-    // In a real app, this would add the product to a cart state/database
+    const product = productsData.find(p => p.id === id);
+    toast.success(`Added ${product?.name} to cart`);
   };
 
   const handleCheckout = () => {
-    if (!isLoggedIn) {
-      toast.error("Please login to checkout");
-      navigate('/admin-login');
+    if (cartItems.length === 0) {
+      toast.error("Your cart is empty");
       return;
     }
     
+    // Store cart in localStorage for checkout page to access
+    localStorage.setItem('cartItems', JSON.stringify(cartItems));
     navigate('/checkout');
   };
+
+  const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -153,46 +87,15 @@ const Products = () => {
         <section className="py-16 bg-gray-50">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             {/* User action */}
-            <div className="mb-8 flex justify-end">
-              {!isLoggedIn ? (
-                <Button 
-                  onClick={() => navigate('/admin-login')}
-                  className="bg-kimcom-600 hover:bg-kimcom-700"
-                >
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Login to Checkout
-                </Button>
-              ) : (
-                <Button 
-                  onClick={handleCheckout}
-                  className="bg-kimcom-600 hover:bg-kimcom-700"
-                >
-                  Proceed to Checkout
-                </Button>
-              )}
-            </div>
-
-            {/* Search and filter */}
-            <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-              <div className="col-span-1 md:col-span-2">
+            <div className="mb-8 flex justify-between items-center">
+              <div className="flex items-center">
+                <span className="mr-2">Filter by:</span>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <Input
-                    type="text"
-                    placeholder="Search products..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              <div>
-                <div className="relative flex items-center">
-                  <Filter className="absolute left-3 text-gray-400" />
+                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="appearance-none bg-white border border-gray-300 rounded-md pl-10 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-kimcom-500 focus:border-transparent w-full"
+                    className="appearance-none bg-white border border-gray-300 rounded-md pl-10 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-kimcom-500 focus:border-transparent"
                   >
                     {categories.map(category => (
                       <option key={category} value={category}>{category}</option>
@@ -204,6 +107,43 @@ const Products = () => {
                     </svg>
                   </div>
                 </div>
+              </div>
+              <div className="flex space-x-4">
+                <Button 
+                  variant="outline"
+                  className="relative"
+                  onClick={() => cartItemCount > 0 && handleCheckout()}
+                >
+                  <ShoppingCart className="h-5 w-5 mr-2" />
+                  Cart
+                  {cartItemCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {cartItemCount}
+                    </span>
+                  )}
+                </Button>
+                
+                <Button 
+                  onClick={handleCheckout}
+                  className="bg-kimcom-600 hover:bg-kimcom-700"
+                  disabled={cartItemCount === 0}
+                >
+                  Proceed to Checkout
+                </Button>
+              </div>
+            </div>
+
+            {/* Search box */}
+            <div className="mb-8">
+              <div className="relative max-w-md mx-auto">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
               </div>
             </div>
 
@@ -224,6 +164,7 @@ const Products = () => {
                     image={product.image}
                     category={product.category}
                     difficulty={product.difficulty}
+                    stock={product.stock}
                     onViewDetails={() => handleViewDetails(product.id)}
                     onAddToCart={() => handleAddToCart(product.id)}
                   />

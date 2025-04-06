@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,58 +11,20 @@ import { Package, PlusCircle, Search, MoreVertical, Edit, Trash, ArrowUpDown, Do
 import { toast } from 'sonner';
 import ProductForm from '@/components/admin/ProductForm';
 import { useNavigate } from 'react-router-dom';
-
-// Sample product data
-const initialProducts = [
-  {
-    id: '1',
-    name: 'Wireless Keyboard',
-    price: '4500',
-    category: 'Electronics',
-    stock: '24',
-    image: '/placeholder.svg',
-    sku: 'KB-001',
-    description: 'A premium wireless keyboard with long battery life',
-  },
-  {
-    id: '2',
-    name: 'LED Monitor 24"',
-    price: '18900',
-    category: 'Electronics',
-    stock: '12',
-    image: '/placeholder.svg',
-    sku: 'MON-002',
-    description: '24-inch LED monitor with HD resolution',
-  },
-  {
-    id: '3',
-    name: 'Ergonomic Mouse',
-    price: '2800',
-    category: 'Electronics',
-    stock: '35',
-    image: '/placeholder.svg',
-    sku: 'MS-003',
-    description: 'Comfortable ergonomic mouse designed for all-day use',
-  },
-  {
-    id: '4',
-    name: 'USB-C Hub',
-    price: '3599',
-    category: 'Accessories',
-    stock: '18',
-    image: '/placeholder.svg',
-    sku: 'USB-004',
-    description: 'Multi-port USB-C hub with power delivery',
-  },
-];
+import { productsData, Product } from '@/data/productsData';
 
 const ProductManager: React.FC = () => {
   const navigate = useNavigate();
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState('all');
+  
+  useEffect(() => {
+    // Load products from our shared data source
+    setProducts(productsData);
+  }, []);
   
   // Filter products based on search term
   const filteredProducts = products.filter(product => 
@@ -73,9 +35,10 @@ const ProductManager: React.FC = () => {
   
   const handleAddProduct = (productData: any) => {
     const newProduct = {
-      id: Date.now().toString(),
+      id: `p${Date.now().toString().slice(-5)}`,
       ...productData,
       image: productData.imageUrl || (productData.image ? URL.createObjectURL(productData.image) : '/placeholder.svg'),
+      difficulty: productData.difficulty || 'Medium', // Default difficulty
     };
     
     setProducts([...products, newProduct]);
@@ -84,6 +47,8 @@ const ProductManager: React.FC = () => {
   };
   
   const handleUpdateProduct = (productData: any) => {
+    if (!editingProduct) return;
+    
     const updatedProducts = products.map(product => 
       product.id === editingProduct.id ? {
         ...product,
@@ -125,7 +90,7 @@ const ProductManager: React.FC = () => {
     toast.success(`${selectedProducts.length} products deleted successfully`);
   };
   
-  const handleEditProduct = (product: any) => {
+  const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
     setActiveTab('edit');
   };
@@ -135,11 +100,11 @@ const ProductManager: React.FC = () => {
     let csvContent = "data:text/csv;charset=utf-8,";
     
     // Add headers
-    csvContent += "ID,Name,SKU,Category,Price,Stock,Description\n";
+    csvContent += "ID,Name,SKU,Category,Price,Stock,Difficulty,Description\n";
     
     // Add rows
     products.forEach(product => {
-      csvContent += `${product.id},${product.name},${product.sku},${product.category},${product.price},${product.stock},"${product.description}"\n`;
+      csvContent += `${product.id},${product.name},${product.sku},${product.category},${product.price},${product.stock},${product.difficulty},"${product.description}"\n`;
     });
     
     // Create download link
@@ -152,6 +117,19 @@ const ProductManager: React.FC = () => {
     document.body.removeChild(link);
     
     toast.success('Products exported successfully');
+  };
+  
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case 'Easy':
+        return 'bg-green-100 text-green-800';
+      case 'Medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Advanced':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
   
   return (
@@ -227,6 +205,7 @@ const ProductManager: React.FC = () => {
                       </th>
                       <th className="p-3">SKU</th>
                       <th className="p-3">Category</th>
+                      <th className="p-3">Difficulty</th>
                       <th className="p-3 text-right">Price</th>
                       <th className="p-3 text-right">Stock</th>
                       <th className="p-3 w-10"></th>
@@ -248,7 +227,7 @@ const ProductManager: React.FC = () => {
                               <img 
                                 src={product.image} 
                                 alt={product.name} 
-                                className="h-full w-full object-contain"
+                                className="h-full w-full object-cover"
                                 onError={(e) => {
                                   const target = e.target as HTMLImageElement;
                                   target.src = '/placeholder.svg';
@@ -270,7 +249,12 @@ const ProductManager: React.FC = () => {
                               {product.category}
                             </Badge>
                           </td>
-                          <td className="p-3 text-right font-medium">KSh {product.price}</td>
+                          <td className="p-3">
+                            <Badge className={`font-normal ${getDifficultyColor(product.difficulty)}`}>
+                              {product.difficulty} Install
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-right font-medium">KSh {product.price.toLocaleString()}</td>
                           <td className="p-3 text-right">
                             <span className={`font-medium ${Number(product.stock) <= 5 ? 'text-red-600' : ''}`}>
                               {product.stock}
@@ -300,7 +284,7 @@ const ProductManager: React.FC = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={8} className="p-10 text-center">
+                        <td colSpan={9} className="p-10 text-center">
                           <Package className="h-10 w-10 text-gray-300 mx-auto mb-2" />
                           <p className="text-gray-500">No products found</p>
                           {searchTerm && (

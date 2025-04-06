@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -9,32 +9,41 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { CreditCard, Phone, Loader2, CheckCircle } from 'lucide-react';
+import { CreditCard, Phone, Loader2, CheckCircle, Truck, Calendar } from 'lucide-react';
+import { productsData } from '@/data/productsData';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'card'>('mpesa');
+  const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'card' | 'ondelivery'>('mpesa');
   const [mpesaPhone, setMpesaPhone] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
   
-  // Mock cart items - in a real app, these would come from a cart context or state
-  const cartItems = [
-    {
-      id: "p1",
-      name: "HD Dome Camera",
-      price: 8999,
-      quantity: 1
-    },
-    {
-      id: "p6",
-      name: "PTZ Security Camera",
-      price: 24999,
-      quantity: 2
+  // Load cart items from localStorage
+  const [cartItems, setCartItems] = useState<{id: string, quantity: number}[]>([]);
+  
+  useEffect(() => {
+    const storedCart = localStorage.getItem('cartItems');
+    if (storedCart) {
+      setCartItems(JSON.parse(storedCart));
     }
-  ];
+  }, []);
   
-  const subtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  // Map cart items to full product details
+  const cartProducts = cartItems.map(item => {
+    const product = productsData.find(p => p.id === item.id);
+    return {
+      ...product,
+      quantity: item.quantity
+    };
+  }).filter(item => item.id); // Filter out any undefined items
+  
+  const subtotal = cartProducts.reduce((total, item) => total + (item.price * item.quantity), 0);
   const shippingCost = 500;
   const total = subtotal + shippingCost;
   
@@ -43,6 +52,16 @@ const Checkout = () => {
     
     if (!mpesaPhone || mpesaPhone.length !== 10) {
       toast.error("Please enter a valid M-Pesa phone number");
+      return;
+    }
+    
+    if (!deliveryAddress.trim()) {
+      toast.error("Please enter your delivery address");
+      return;
+    }
+    
+    if (!agreeToTerms) {
+      toast.error("Please agree to the terms and conditions");
       return;
     }
     
@@ -59,15 +78,91 @@ const Checkout = () => {
     }, 3000);
   };
   
-  const handleCardPayment = () => {
+  const handleCardPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!deliveryAddress.trim()) {
+      toast.error("Please enter your delivery address");
+      return;
+    }
+    
+    if (!agreeToTerms) {
+      toast.error("Please agree to the terms and conditions");
+      return;
+    }
+    
     // In a real app, this would integrate with a card payment gateway
     toast.info("Card payment is currently not available. Please use M-Pesa.");
   };
   
+  const handlePayOnDelivery = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!deliveryAddress.trim()) {
+      toast.error("Please enter your delivery address");
+      return;
+    }
+    
+    if (!agreeToTerms) {
+      toast.error("Please agree to the terms and conditions");
+      return;
+    }
+    
+    setIsProcessing(true);
+    
+    // Simulate order processing
+    setTimeout(() => {
+      setIsProcessing(false);
+      setIsPaid(true);
+      toast.success("Your order has been placed! You'll pay on delivery.");
+    }, 2000);
+  };
+  
   const handleCompleteOrder = () => {
     toast.success("Order placed successfully!");
+    // Clear the cart
+    localStorage.removeItem('cartItems');
     navigate('/');
   };
+
+  const handleEmptyCart = () => {
+    if (cartProducts.length === 0) {
+      toast.error("Your cart is already empty");
+      return;
+    }
+
+    localStorage.removeItem('cartItems');
+    setCartItems([]);
+    toast.success("Cart emptied successfully");
+    setTimeout(() => navigate('/products'), 1500);
+  };
+  
+  if (cartProducts.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow py-12 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <Card className="max-w-lg mx-auto">
+              <CardHeader>
+                <CardTitle>Your Cart is Empty</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center p-8">
+                <div className="text-gray-500 mb-6">
+                  <p>You don't have any products in your cart.</p>
+                  <p className="mt-2">Add some products and come back to checkout!</p>
+                </div>
+                <Button onClick={() => navigate('/products')} className="bg-kimcom-600 hover:bg-kimcom-700">
+                  Browse Products
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -91,14 +186,30 @@ const Checkout = () => {
                         <TableHead>Product</TableHead>
                         <TableHead className="text-right">Quantity</TableHead>
                         <TableHead className="text-right">Price</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {cartItems.map(item => (
+                      {cartProducts.map(item => (
                         <TableRow key={item.id}>
-                          <TableCell>{item.name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <div className="h-12 w-12 rounded bg-gray-100 mr-3 overflow-hidden">
+                                <img 
+                                  src={item.image} 
+                                  alt={item.name} 
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                              <div>
+                                <p className="font-medium">{item.name}</p>
+                                <p className="text-sm text-gray-500">{item.category}</p>
+                              </div>
+                            </div>
+                          </TableCell>
                           <TableCell className="text-right">{item.quantity}</TableCell>
                           <TableCell className="text-right">KSh {item.price.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">KSh {(item.price * item.quantity).toLocaleString()}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -119,6 +230,37 @@ const Checkout = () => {
                       <span>KSh {total.toLocaleString()}</span>
                     </div>
                   </div>
+                  
+                  <div className="mt-6">
+                    <Button 
+                      variant="outline" 
+                      onClick={handleEmptyCart}
+                      className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                    >
+                      Empty Cart
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Delivery Information */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Delivery Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="address">Delivery Address</Label>
+                      <Input 
+                        id="address"
+                        placeholder="Enter your full delivery address"
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                        disabled={isPaid}
+                      />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -130,29 +272,60 @@ const Checkout = () => {
                   <CardTitle>Payment Method</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex space-x-2 mb-6">
-                    <Button 
-                      variant={paymentMethod === 'mpesa' ? 'default' : 'outline'} 
-                      className={paymentMethod === 'mpesa' ? 'bg-green-600 hover:bg-green-700' : ''}
-                      onClick={() => setPaymentMethod('mpesa')}
-                    >
-                      <Phone className="mr-2 h-4 w-4" />
-                      M-Pesa
-                    </Button>
-                    <Button 
-                      variant={paymentMethod === 'card' ? 'default' : 'outline'}
-                      onClick={() => setPaymentMethod('card')}
-                    >
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Card
-                    </Button>
+                  <RadioGroup 
+                    defaultValue="mpesa" 
+                    value={paymentMethod}
+                    onValueChange={(value) => setPaymentMethod(value as 'mpesa' | 'card' | 'ondelivery')}
+                    className="space-y-4"
+                    disabled={isPaid}
+                  >
+                    <div className="flex items-center space-x-2 border rounded-md p-3 hover:bg-gray-50">
+                      <RadioGroupItem value="mpesa" id="mpesa" />
+                      <Label htmlFor="mpesa" className="flex items-center cursor-pointer flex-1">
+                        <Phone className="mr-2 h-4 w-4 text-green-600" />
+                        M-Pesa
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 border rounded-md p-3 hover:bg-gray-50">
+                      <RadioGroupItem value="card" id="card" />
+                      <Label htmlFor="card" className="flex items-center cursor-pointer flex-1">
+                        <CreditCard className="mr-2 h-4 w-4 text-blue-600" />
+                        Card Payment
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 border rounded-md p-3 hover:bg-gray-50">
+                      <RadioGroupItem value="ondelivery" id="ondelivery" />
+                      <Label htmlFor="ondelivery" className="flex items-center cursor-pointer flex-1">
+                        <Truck className="mr-2 h-4 w-4 text-orange-600" />
+                        Pay on Delivery
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                  
+                  <div className="mt-6">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <Checkbox 
+                        id="terms" 
+                        checked={agreeToTerms} 
+                        onCheckedChange={(checked) => setAgreeToTerms(checked as boolean)} 
+                        disabled={isPaid}
+                      />
+                      <label
+                        htmlFor="terms"
+                        className="text-sm text-gray-600 cursor-pointer"
+                      >
+                        I agree to the terms and conditions
+                      </label>
+                    </div>
                   </div>
                   
                   {paymentMethod === 'mpesa' && !isPaid && (
-                    <form onSubmit={handleMpesaPayment}>
+                    <form onSubmit={handleMpesaPayment} className="mt-4">
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-medium mb-1">M-Pesa Phone Number</label>
+                          <Label className="block text-sm font-medium mb-1">M-Pesa Phone Number</Label>
                           <Input 
                             placeholder="07XXXXXXXX" 
                             value={mpesaPhone}
@@ -164,7 +337,7 @@ const Checkout = () => {
                         <Button 
                           type="submit" 
                           className="w-full bg-green-600 hover:bg-green-700"
-                          disabled={isProcessing}
+                          disabled={isProcessing || !agreeToTerms}
                         >
                           {isProcessing ? (
                             <>
@@ -179,38 +352,84 @@ const Checkout = () => {
                     </form>
                   )}
                   
-                  {paymentMethod === 'card' && (
-                    <div className="space-y-4">
+                  {paymentMethod === 'card' && !isPaid && (
+                    <form onSubmit={handleCardPayment} className="mt-4 space-y-4">
                       <div>
-                        <label className="block text-sm font-medium mb-1">Card Number</label>
-                        <Input placeholder="XXXX XXXX XXXX XXXX" disabled />
+                        <Label className="block text-sm font-medium mb-1">Card Number</Label>
+                        <Input placeholder="XXXX XXXX XXXX XXXX" disabled={isProcessing} />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium mb-1">Expiry Date</label>
-                          <Input placeholder="MM/YY" disabled />
+                          <Label className="block text-sm font-medium mb-1">Expiry Date</Label>
+                          <Input placeholder="MM/YY" disabled={isProcessing} />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium mb-1">CVV</label>
-                          <Input placeholder="XXX" disabled />
+                          <Label className="block text-sm font-medium mb-1">CVV</Label>
+                          <Input placeholder="XXX" disabled={isProcessing} />
                         </div>
                       </div>
                       <Button 
-                        type="button" 
+                        type="submit" 
                         className="w-full"
-                        onClick={handleCardPayment}
-                        disabled
+                        disabled={isProcessing || !agreeToTerms}
                       >
-                        Pay with Card
+                        {isProcessing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          'Pay with Card'
+                        )}
                       </Button>
-                    </div>
+                    </form>
+                  )}
+                  
+                  {paymentMethod === 'ondelivery' && !isPaid && (
+                    <form onSubmit={handlePayOnDelivery} className="mt-4">
+                      <div className="p-4 bg-yellow-50 rounded-md text-yellow-800 mb-4">
+                        <p className="text-sm">
+                          You'll pay the full amount when your order is delivered to you.
+                          Our delivery agent will accept cash or card payment.
+                        </p>
+                      </div>
+                      <Button 
+                        type="submit"
+                        className="w-full bg-orange-600 hover:bg-orange-700"
+                        disabled={isProcessing || !agreeToTerms}
+                      >
+                        {isProcessing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          'Place Order - Pay on Delivery'
+                        )}
+                      </Button>
+                    </form>
                   )}
                   
                   {isPaid && (
                     <div className="text-center py-4">
                       <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                      <h3 className="text-xl font-bold text-green-700 mb-2">Payment Successful</h3>
-                      <p className="text-gray-600 mb-4">Your M-Pesa payment has been received.</p>
+                      <h3 className="text-xl font-bold text-green-700 mb-2">
+                        {paymentMethod === 'ondelivery' ? 'Order Placed Successfully' : 'Payment Successful'}
+                      </h3>
+                      <p className="text-gray-600 mb-4">
+                        {paymentMethod === 'mpesa' 
+                          ? 'Your M-Pesa payment has been received.' 
+                          : paymentMethod === 'ondelivery'
+                            ? 'Your order has been confirmed. You will pay on delivery.'
+                            : 'Your payment has been processed successfully.'}
+                      </p>
+                      <div className="p-4 bg-blue-50 rounded-md text-blue-800 mb-4">
+                        <div className="flex items-center">
+                          <Calendar className="h-5 w-5 mr-2" />
+                          <span className="font-medium">Expected Delivery:</span>
+                        </div>
+                        <p className="ml-7 text-sm">Within 2-3 business days</p>
+                      </div>
                       <Button 
                         onClick={handleCompleteOrder} 
                         className="w-full bg-kimcom-600 hover:bg-kimcom-700"

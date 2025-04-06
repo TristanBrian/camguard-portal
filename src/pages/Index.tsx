@@ -10,7 +10,6 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { 
   Camera, 
-  Video, 
   Settings, 
   Wifi, 
   ShieldCheck, 
@@ -19,8 +18,13 @@ import {
   ArrowRight,
   Package 
 } from "lucide-react";
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { productsData } from '@/data/productsData';
 
 const Index = () => {
+  const navigate = useNavigate();
+  
   // Sample service data
   const services = [
     {
@@ -49,45 +53,8 @@ const Index = () => {
     },
   ];
 
-  // Sample product data
-  const featuredProducts = [
-    {
-      id: "p1",
-      name: "HD Dome Camera",
-      description: "1080p indoor security camera with night vision and motion detection.",
-      price: 89.99,
-      image: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
-      category: "Indoor",
-      difficulty: "Easy" as const,
-    },
-    {
-      id: "p2",
-      name: "4K Bullet Camera",
-      description: "Professional 4K outdoor camera with 30m IR range and IP67 weatherproof rating.",
-      price: 149.99,
-      image: "https://images.unsplash.com/photo-1531297484001-80022131f5a1",
-      category: "Outdoor",
-      difficulty: "Medium" as const,
-    },
-    {
-      id: "p3",
-      name: "8-Channel NVR",
-      description: "Network video recorder with 2TB storage and remote viewing capabilities.",
-      price: 299.99,
-      image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f",
-      category: "Recorder",
-      difficulty: "Advanced" as const,
-    },
-    {
-      id: "p4",
-      name: "Mesh WiFi System",
-      description: "Whole-home coverage with seamless roaming and parental controls.",
-      price: 179.99,
-      image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7",
-      category: "Networking",
-      difficulty: "Medium" as const,
-    },
-  ];
+  // Get featured products (first 4) from our shared products data
+  const featuredProducts = productsData.slice(0, 4);
 
   // Sample testimonial data
   const testimonials = [
@@ -110,6 +77,34 @@ const Index = () => {
       rating: 4,
     },
   ];
+
+  const handleViewDetails = (id: string) => {
+    navigate(`/product-details/${id}`);
+  };
+
+  const handleAddToCart = (id: string) => {
+    // Get cart from localStorage or initialize empty array
+    const existingCart = localStorage.getItem('cartItems');
+    const cartItems = existingCart ? JSON.parse(existingCart) : [];
+    
+    // Check if product already in cart
+    const existingItem = cartItems.find((item: {id: string}) => item.id === id);
+    
+    if (existingItem) {
+      // Increment quantity if already in cart
+      const updatedCart = cartItems.map((item: {id: string, quantity: number}) => 
+        item.id === id ? {...item, quantity: item.quantity + 1} : item
+      );
+      localStorage.setItem('cartItems', JSON.stringify(updatedCart));
+    } else {
+      // Add new item to cart
+      const updatedCart = [...cartItems, {id, quantity: 1}];
+      localStorage.setItem('cartItems', JSON.stringify(updatedCart));
+    }
+    
+    const product = productsData.find(p => p.id === id);
+    toast.success(`Added ${product?.name} to cart`);
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -141,7 +136,12 @@ const Index = () => {
             </div>
 
             <div className="mt-16 text-center">
-              <Button variant="outline" size="lg" className="border-kimcom-200 text-kimcom-700 hover:bg-kimcom-50">
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="border-kimcom-200 text-kimcom-700 hover:bg-kimcom-50"
+                onClick={() => navigate('/services')}
+              >
                 View All Services
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
@@ -243,12 +243,19 @@ const Index = () => {
                   image={product.image}
                   category={product.category}
                   difficulty={product.difficulty}
+                  stock={product.stock}
+                  onViewDetails={() => handleViewDetails(product.id)}
+                  onAddToCart={() => handleAddToCart(product.id)}
                 />
               ))}
             </div>
 
             <div className="mt-16 text-center">
-              <Button className="bg-kimcom-600 hover:bg-kimcom-700" size="lg">
+              <Button 
+                className="bg-kimcom-600 hover:bg-kimcom-700" 
+                size="lg"
+                onClick={() => navigate('/products')}
+              >
                 View All Products
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
