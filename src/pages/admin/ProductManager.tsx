@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,6 +59,7 @@ const ProductManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState('all');
   
   // Filter products based on search term
   const filteredProducts = products.filter(product => 
@@ -120,13 +120,18 @@ const ProductManager: React.FC = () => {
     toast.success(`${selectedProducts.length} products deleted successfully`);
   };
   
+  const handleEditProduct = (product: any) => {
+    setEditingProduct(product);
+    setActiveTab('edit');
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Product Management</h1>
       </div>
       
-      <Tabs defaultValue="all" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <TabsList className="mb-0">
             <TabsTrigger value="all">All Products</TabsTrigger>
@@ -241,10 +246,7 @@ const ProductManager: React.FC = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => {
-                                  setEditingProduct(product);
-                                  document.querySelector('button[value="edit"]')?.click();
-                                }}>
+                                <DropdownMenuItem onClick={() => handleEditProduct(product)}>
                                   <Edit className="mr-2 h-4 w-4" />
                                   Edit
                                 </DropdownMenuItem>
