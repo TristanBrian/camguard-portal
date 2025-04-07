@@ -11,6 +11,10 @@ const Navbar = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
+  const handleCallButton = () => {
+    window.location.href = 'tel:0740213382';
+  };
+
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -44,14 +48,16 @@ const Navbar = () => {
 
           {/* Action Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="outline" size="sm" className="flex items-center gap-1">
+            <Button variant="outline" size="sm" className="flex items-center gap-1" onClick={handleCallButton}>
               <Phone className="h-4 w-4" />
-              <span>Call Us</span>
+              <span>0740213382</span>
             </Button>
-            <Button className="bg-kimcom-600 hover:bg-kimcom-700 flex items-center gap-1">
-              <ShoppingCart className="h-4 w-4" />
-              <span>Shop Now</span>
-            </Button>
+            <Link to="/products">
+              <Button className="bg-kimcom-600 hover:bg-kimcom-700 flex items-center gap-1">
+                <ShoppingCart className="h-4 w-4" />
+                <span>Shop Now</span>
+              </Button>
+            </Link>
             <Link to="/login">
               <Button variant="ghost" size="sm" className="flex items-center gap-1 text-gray-600 hover:text-kimcom-600">
                 <UserCircle2 className="h-4 w-4" />
@@ -134,14 +140,16 @@ const Navbar = () => {
               Admin
             </Link>
             <div className="flex flex-col space-y-2 pt-4">
-              <Button variant="outline" size="sm" className="flex items-center justify-center gap-1">
+              <Button variant="outline" size="sm" className="flex items-center justify-center gap-1" onClick={handleCallButton}>
                 <Phone className="h-4 w-4" />
-                <span>Call Us</span>
+                <span>0740213382</span>
               </Button>
-              <Button className="bg-kimcom-600 hover:bg-kimcom-700 flex items-center justify-center gap-1">
-                <ShoppingCart className="h-4 w-4" />
-                <span>Shop Now</span>
-              </Button>
+              <Link to="/products">
+                <Button className="bg-kimcom-600 hover:bg-kimcom-700 flex items-center justify-center gap-1 w-full">
+                  <ShoppingCart className="h-4 w-4" />
+                  <span>Shop Now</span>
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

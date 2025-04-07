@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -205,8 +204,14 @@ const Services = () => {
   ];
 
   const handleServiceClick = (id: string) => {
-    alert(`You clicked on service ${id}`);
-    // In a real app, this would navigate to a service details page or open a form
+    // Format phone number for WhatsApp link
+    const phoneNumber = "0740213382";
+    const formattedPhone = phoneNumber.startsWith('0') ? `254${phoneNumber.substring(1)}` : phoneNumber;
+    const message = encodeURIComponent(`I'm interested in your ${id} service. Please provide more information.`);
+    const whatsappUrl = `https://wa.me/${formattedPhone}?text=${message}`;
+    
+    // Open WhatsApp in a new tab
+    window.open(whatsappUrl, '_blank');
   };
 
   return (
@@ -241,8 +246,8 @@ const Services = () => {
                   title={category.title}
                   description={category.description}
                   icon={category.icon}
-                  buttonText="View Services"
-                  onClick={() => handleServiceClick(category.id)}
+                  buttonText="Contact via WhatsApp"
+                  onClick={() => handleServiceClick(category.title)}
                 />
               ))}
             </div>
@@ -324,7 +329,7 @@ const Services = () => {
                     <Button 
                       variant="outline" 
                       className="w-full justify-center border-kimcom-200 text-kimcom-700 hover:bg-kimcom-50 hover:text-kimcom-800"
-                      onClick={() => handleServiceClick(service.id)}
+                      onClick={() => handleServiceClick(service.title)}
                     >
                       Request Service
                     </Button>
