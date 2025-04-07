@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
@@ -12,12 +11,11 @@ const Navbar = () => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
-  useEffect(() => {
+  const updateCartCount = () => {
     // Check if user is logged in
     const user = localStorage.getItem('kimcom_current_user');
     if (user) {
       const userData = JSON.parse(user);
-      setCurrentUser(userData);
       
       // Load user's cart count
       const userCartKey = `kimcom_cart_${userData.id}`;
@@ -25,6 +23,8 @@ const Navbar = () => {
       if (savedCart) {
         const cartItems = JSON.parse(savedCart);
         setCartItemCount(cartItems.reduce((total: number, item: any) => total + item.quantity, 0));
+      } else {
+        setCartItemCount(0);
       }
     } else {
       // Check anonymous cart
@@ -32,40 +32,34 @@ const Navbar = () => {
       if (anonymousCart) {
         const cartItems = JSON.parse(anonymousCart);
         setCartItemCount(cartItems.reduce((total: number, item: any) => total + item.quantity, 0));
+      } else {
+        setCartItemCount(0);
       }
     }
-  }, []);
+  };
 
-  // Update cart count whenever localStorage changes
   useEffect(() => {
-    const handleStorageChange = () => {
-      if (currentUser) {
-        const userCartKey = `kimcom_cart_${currentUser.id}`;
-        const savedCart = localStorage.getItem(userCartKey);
-        if (savedCart) {
-          const cartItems = JSON.parse(savedCart);
-          setCartItemCount(cartItems.reduce((total: number, item: any) => total + item.quantity, 0));
-        }
-      } else {
-        const anonymousCart = localStorage.getItem('cartItems');
-        if (anonymousCart) {
-          const cartItems = JSON.parse(anonymousCart);
-          setCartItemCount(cartItems.reduce((total: number, item: any) => total + item.quantity, 0));
-        }
-      }
-    };
-
+    // Check if user is logged in
+    const user = localStorage.getItem('kimcom_current_user');
+    if (user) {
+      const userData = JSON.parse(user);
+      setCurrentUser(userData);
+    }
+    
+    // Initial cart count update
+    updateCartCount();
+    
     // Set up event listener for storage changes
-    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('storage', updateCartCount);
     
     // Poll for changes since the storage event won't fire in the same tab
-    const interval = setInterval(handleStorageChange, 2000);
+    const interval = setInterval(updateCartCount, 1000);
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('storage', updateCartCount);
       clearInterval(interval);
     };
-  }, [currentUser]);
+  }, []);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -87,6 +81,10 @@ const Navbar = () => {
 
   const handleCartClick = () => {
     navigate('/products');
+    // Trigger cart popover to open via localStorage
+    localStorage.setItem('open_cart_popover', 'true');
+    // Force update of cart count
+    updateCartCount();
   };
 
   return (
@@ -198,7 +196,20 @@ const Navbar = () => {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center">
+            <Button 
+              onClick={handleCartClick}
+              size="sm"
+              variant="ghost"
+              className="relative mr-2"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {cartItemCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {cartItemCount}
+                </span>
+              )}
+            </Button>
             <button
               type="button"
               className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-kimcom-600 hover:bg-gray-100 focus:outline-none"

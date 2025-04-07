@@ -32,6 +32,7 @@ const Products = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [cartItems, setCartItems] = useState<{id: string, quantity: number}[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   
   // Load user and cart data on component mount
   useEffect(() => {
@@ -64,9 +65,17 @@ const Products = () => {
     if (currentUser) {
       // Save cart for logged in user
       localStorage.setItem(`kimcom_cart_${currentUser.id}`, JSON.stringify(cartItems));
+      
+      // Trigger storage event for navbar to detect changes
+      const event = new Event('storage');
+      window.dispatchEvent(event);
     } else {
       // Save anonymous cart
       localStorage.setItem('cartItems', JSON.stringify(cartItems));
+      
+      // Trigger storage event for navbar to detect changes
+      const event = new Event('storage');
+      window.dispatchEvent(event);
     }
   }, [cartItems, currentUser]);
 
@@ -98,6 +107,9 @@ const Products = () => {
     
     const product = productsData.find(p => p.id === id);
     toast.success(`Added ${product?.name} to cart`);
+    
+    // Open cart popover after adding item
+    setIsCartOpen(true);
   };
 
   const handleRemoveFromCart = (id: string) => {
@@ -172,6 +184,11 @@ const Products = () => {
   const cartTotal = cartProductDetails.reduce((total, item) => 
     total + (item.price * item.quantity), 0);
 
+  // Update ProductCard's onAddToCart to use our function
+  const onProductAddToCart = (id: string) => {
+    handleAddToCart(id);
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -213,7 +230,7 @@ const Products = () => {
                 </div>
               </div>
               <div className="flex space-x-4">
-                <Popover>
+                <Popover open={isCartOpen} onOpenChange={setIsCartOpen}>
                   <PopoverTrigger asChild>
                     <Button 
                       variant="outline"
@@ -233,7 +250,7 @@ const Products = () => {
                     {cartItems.length === 0 ? (
                       <div className="text-center py-6">
                         <p className="text-gray-500">Your cart is empty</p>
-                        <Button variant="outline" className="mt-2" onClick={() => navigate('/products')}>
+                        <Button variant="outline" className="mt-2" onClick={() => setIsCartOpen(false)}>
                           Browse Products
                         </Button>
                       </div>
@@ -345,7 +362,7 @@ const Products = () => {
                     difficulty={product.difficulty}
                     stock={product.stock}
                     onViewDetails={() => handleViewDetails(product.id)}
-                    onAddToCart={() => handleAddToCart(product.id)}
+                    onAddToCart={() => onProductAddToCart(product.id)}
                   />
                 ))}
               </div>

@@ -49,6 +49,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     if (onAddToCart) {
       onAddToCart();
     } else {
+      // Fallback if no function provided
       toast.success(`Added ${name} to cart`);
     }
   };

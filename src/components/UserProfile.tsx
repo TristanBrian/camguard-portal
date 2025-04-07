@@ -45,6 +45,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
   useEffect(() => {
     if (user) {
       localStorage.setItem(`kimcom_cart_${user.id}`, JSON.stringify(cartItems));
+      
+      // Trigger storage event for navbar to detect changes
+      const event = new Event('storage');
+      window.dispatchEvent(event);
     }
   }, [cartItems, user]);
 
@@ -91,6 +95,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
       setTimeout(() => navigate('/products'), 500);
     } else {
       navigate('/products');
+      
+      // Set a flag in localStorage to open the cart popover when the products page loads
+      localStorage.setItem('open_cart_popover', 'true');
     }
   };
 
