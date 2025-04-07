@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { User, Mail, Phone, MapPin, ShoppingBag, Package, CreditCard } from 'lucide-react';
+import { User, Mail, Phone, MapPin, ShoppingBag, Package, CreditCard, MinusCircle, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { productsData } from '@/data/productsData';
 
 interface UserProfileProps {
   userId?: string;
@@ -40,6 +41,46 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
     }
   }, [userId]);
 
+  // Save cart whenever it changes
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem(`kimcom_cart_${user.id}`, JSON.stringify(cartItems));
+    }
+  }, [cartItems, user]);
+
+  const handleRemoveFromCart = (id: string) => {
+    const existingItem = cartItems.find(item => item.id === id);
+    const product = productsData.find(p => p.id === id);
+    
+    if (existingItem && existingItem.quantity > 1) {
+      // Reduce quantity by 1
+      setCartItems(cartItems.map(item => 
+        item.id === id ? { ...item, quantity: item.quantity - 1 } : item
+      ));
+      toast.info(`Removed 1 ${product?.name} from cart`);
+    } else {
+      // Remove item completely
+      setCartItems(cartItems.filter(item => item.id !== id));
+      toast.info(`Removed ${product?.name} from cart`);
+    }
+  };
+
+  const handleDeleteFromCart = (id: string) => {
+    const product = productsData.find(p => p.id === id);
+    setCartItems(cartItems.filter(item => item.id !== id));
+    toast.info(`Removed ${product?.name} from cart`);
+  };
+
+  const handleEmptyCart = () => {
+    if (cartItems.length === 0) {
+      toast.error("Your cart is already empty");
+      return;
+    }
+    
+    setCartItems([]);
+    toast.success("Cart emptied successfully");
+  };
+
   const handleShopNow = () => {
     navigate('/products');
   };
@@ -61,6 +102,15 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
       navigate('/checkout');
     }
   };
+
+  // Get product details for cart items
+  const cartProductDetails = cartItems.map(item => {
+    const product = productsData.find(p => p.id === item.id);
+    return {
+      ...product,
+      quantity: item.quantity
+    };
+  }).filter(item => item); // Filter out any undefined items
 
   if (!user) {
     return (
@@ -113,6 +163,44 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
                 <p className="text-sm text-gray-600 mb-2">
                   You have {cartItems.reduce((total, item) => total + item.quantity, 0)} item(s) in your cart
                 </p>
+                
+                {/* Cart items list */}
+                <div className="max-h-60 overflow-y-auto space-y-2 mb-3">
+                  {cartProductDetails.map(item => (
+                    <div key={item.id} className="flex items-center justify-between py-2 border-b">
+                      <div className="flex items-center">
+                        <img 
+                          src={item.image} 
+                          alt={item.name} 
+                          className="w-8 h-8 object-cover rounded mr-2" 
+                        />
+                        <div>
+                          <p className="font-medium text-sm">{item.name}</p>
+                          <p className="text-xs text-gray-500">KSh {item.price.toLocaleString()} × {item.quantity}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 rounded-full" 
+                          onClick={() => handleRemoveFromCart(item.id)}
+                        >
+                          <MinusCircle className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 rounded-full text-red-500 hover:text-red-700 hover:bg-red-50" 
+                          onClick={() => handleDeleteFromCart(item.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
                 <div className="flex space-x-2">
                   <Button 
                     variant="outline" 
@@ -132,6 +220,15 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
                     Checkout
                   </Button>
                 </div>
+                
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full mt-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                  onClick={handleEmptyCart}
+                >
+                  Empty Cart
+                </Button>
               </div>
             ) : (
               <div>
