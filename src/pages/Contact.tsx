@@ -62,14 +62,14 @@ const Contact = () => {
     {
       city: "Nairobi",
       address: "KimCom Tower, 456 Ngong Road, Nairobi",
-      phone: "+254 700 123 456",
+      phone: "+254 740213382",
       email: "nairobi@kimcom.co.ke",
       hours: "Mon-Fri: 8am - 6pm, Sat: 9am - 1pm"
     },
     {
       city: "Mombasa",
       address: "Coastal Business Centre, Nyali Road, Mombasa",
-      phone: "+254 700 789 012",
+      phone: "+254 740213382",
       email: "mombasa@kimcom.co.ke",
       hours: "Mon-Fri: 8am - 6pm, Sat: 9am - 1pm"
     },
