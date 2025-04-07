@@ -1,11 +1,23 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
-import { Menu, X, ShieldCheck, ShoppingCart, Phone, Lock, User, UserCircle2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Menu, X, ShieldCheck, ShoppingCart, Phone, Lock, User, UserCircle2, LogOut } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const isMobile = useIsMobile();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if user is logged in
+    const user = localStorage.getItem('kimcom_current_user');
+    if (user) {
+      setCurrentUser(JSON.parse(user));
+    }
+  }, []);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -13,6 +25,12 @@ const Navbar = () => {
 
   const handleCallButton = () => {
     window.location.href = 'tel:0740213382';
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('kimcom_current_user');
+    setCurrentUser(null);
+    navigate('/');
   };
 
   return (
@@ -47,29 +65,49 @@ const Navbar = () => {
           </nav>
 
           {/* Action Buttons */}
-          <div className="hidden md:flex items-center space-x-4">
-            <Button variant="outline" size="sm" className="flex items-center gap-1" onClick={handleCallButton}>
-              <Phone className="h-4 w-4" />
-              <span>0740213382</span>
+          <div className="hidden md:flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex items-center gap-1 whitespace-nowrap text-xs lg:text-sm" 
+              onClick={handleCallButton}
+            >
+              <Phone className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />
+              <span className="hidden sm:inline">0740213382</span>
             </Button>
+            
             <Link to="/products">
-              <Button className="bg-kimcom-600 hover:bg-kimcom-700 flex items-center gap-1">
-                <ShoppingCart className="h-4 w-4" />
+              <Button className="bg-kimcom-600 hover:bg-kimcom-700 flex items-center gap-1 text-xs lg:text-sm">
+                <ShoppingCart className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />
                 <span>Shop Now</span>
               </Button>
             </Link>
-            <Link to="/login">
-              <Button variant="ghost" size="sm" className="flex items-center gap-1 text-gray-600 hover:text-kimcom-600">
-                <UserCircle2 className="h-4 w-4" />
-                <span>Login</span>
-              </Button>
-            </Link>
-            <Link to="/admin-login">
-              <Button variant="ghost" size="sm" className="flex items-center gap-1 text-gray-600 hover:text-kimcom-600">
-                <Lock className="h-4 w-4" />
-                <span>Admin</span>
-              </Button>
-            </Link>
+            
+            {currentUser ? (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700 hidden lg:block">Hi, {currentUser.fullName.split(' ')[0]}</span>
+                <Button variant="ghost" size="sm" className="flex items-center gap-1 text-gray-600 hover:text-kimcom-600" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden lg:inline">Logout</span>
+                </Button>
+              </div>
+            ) : (
+              <Link to="/login">
+                <Button variant="ghost" size="sm" className="flex items-center gap-1 text-gray-600 hover:text-kimcom-600">
+                  <UserCircle2 className="h-3 w-3 lg:h-4 lg:w-4" />
+                  <span>Login</span>
+                </Button>
+              </Link>
+            )}
+            
+            {currentUser?.role === 'admin' && (
+              <Link to="/admin-login">
+                <Button variant="ghost" size="sm" className="flex items-center gap-1 text-gray-600 hover:text-kimcom-600">
+                  <Lock className="h-3 w-3 lg:h-4 lg:w-4" />
+                  <span className="hidden lg:inline">Admin</span>
+                </Button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -125,26 +163,49 @@ const Navbar = () => {
             >
               Contact
             </Link>
-            <Link
-              to="/login"
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Login
-            </Link>
-            <Link
-              to="/admin-login"
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Admin
-            </Link>
+            
+            {currentUser ? (
+              <>
+                <div className="block px-3 py-2 text-base font-medium text-gray-700">
+                  Signed in as <span className="font-semibold">{currentUser.fullName}</span>
+                </div>
+                <button
+                  className="flex w-full px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
+                  onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  <LogOut className="h-5 w-5 mr-2" />
+                  Logout
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Login
+              </Link>
+            )}
+            
+            {currentUser?.role === 'admin' && (
+              <Link
+                to="/admin-login"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Admin
+              </Link>
+            )}
+            
             <div className="flex flex-col space-y-2 pt-4">
               <Button variant="outline" size="sm" className="flex items-center justify-center gap-1" onClick={handleCallButton}>
                 <Phone className="h-4 w-4" />
                 <span>0740213382</span>
               </Button>
-              <Link to="/products">
+              <Link to="/products" onClick={() => setIsMenuOpen(false)}>
                 <Button className="bg-kimcom-600 hover:bg-kimcom-700 flex items-center justify-center gap-1 w-full">
                   <ShoppingCart className="h-4 w-4" />
                   <span>Shop Now</span>

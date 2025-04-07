@@ -13,12 +13,14 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Admin from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
+import Login from "./pages/Login";
 import ProductManager from "./pages/admin/ProductManager";
 import Statistics from "./pages/admin/Statistics";
 import MarketTrends from "./pages/admin/MarketTrends";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./components/admin/AdminDashboard";
 import AdminSettings from "./components/admin/AdminSettings";
+import UserProfile from "./components/UserProfile";
 
 const queryClient = new QueryClient();
 
@@ -36,7 +38,9 @@ const App = () => (
           <Route path="/services" element={<Services />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="/profile" element={<UserProfile />} />
           
           {/* Admin routes */}
           <Route path="/admin" element={<Admin />}>
