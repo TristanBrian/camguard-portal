@@ -24,14 +24,30 @@ const Checkout = () => {
   const [isPaid, setIsPaid] = useState(false);
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   
   // Load cart items from localStorage
   const [cartItems, setCartItems] = useState<{id: string, quantity: number}[]>([]);
   
   useEffect(() => {
-    const storedCart = localStorage.getItem('cartItems');
-    if (storedCart) {
-      setCartItems(JSON.parse(storedCart));
+    // Check if user is logged in
+    const user = localStorage.getItem('kimcom_current_user');
+    if (user) {
+      const userData = JSON.parse(user);
+      setCurrentUser(userData);
+      
+      // Load user's cart from localStorage
+      const userCartKey = `kimcom_cart_${userData.id}`;
+      const savedCart = localStorage.getItem(userCartKey);
+      if (savedCart) {
+        setCartItems(JSON.parse(savedCart));
+      }
+    } else {
+      // Load anonymous cart if there's no user
+      const anonymousCart = localStorage.getItem('cartItems');
+      if (anonymousCart) {
+        setCartItems(JSON.parse(anonymousCart));
+      }
     }
   }, []);
   
@@ -42,7 +58,7 @@ const Checkout = () => {
       ...product,
       quantity: item.quantity
     };
-  }).filter(item => item.id); // Filter out any undefined items
+  }).filter(item => item && item.id); // Filter out any undefined items
   
   const subtotal = cartProducts.reduce((total, item) => total + (item.price * item.quantity), 0);
   const shippingCost = 500;
@@ -192,8 +208,18 @@ const Checkout = () => {
   
   const handleCompleteOrder = () => {
     toast.success("Order placed successfully!");
-    // Clear the cart
-    localStorage.removeItem('cartItems');
+    
+    // Clear the cart based on user status
+    if (currentUser) {
+      localStorage.removeItem(`kimcom_cart_${currentUser.id}`);
+    } else {
+      localStorage.removeItem('cartItems');
+    }
+    
+    // Trigger storage event for navbar to detect changes
+    const event = new Event('storage');
+    window.dispatchEvent(event);
+    
     navigate('/');
   };
 
@@ -203,8 +229,18 @@ const Checkout = () => {
       return;
     }
 
-    localStorage.removeItem('cartItems');
+    if (currentUser) {
+      localStorage.removeItem(`kimcom_cart_${currentUser.id}`);
+    } else {
+      localStorage.removeItem('cartItems');
+    }
+    
     setCartItems([]);
+    
+    // Trigger storage event for navbar to detect changes
+    const event = new Event('storage');
+    window.dispatchEvent(event);
+    
     toast.success("Cart emptied successfully");
     setTimeout(() => navigate('/products'), 1500);
   };
