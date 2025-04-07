@@ -124,10 +124,10 @@ const About = () => {
               <div>
                 <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Story</h2>
                 <p className="text-gray-700 mb-4">
-                  Founded in 2010, KimCom Solutions began as a small CCTV installation company with a big vision: to make high-quality security systems accessible to everyone in Kenya.
+                  Founded in 2017, KimCom Solutions began as a small CCTV installation company with a big vision: to make high-quality security systems accessible to everyone in Kenya.
                 </p>
                 <p className="text-gray-700 mb-4">
-                  Our founder, John Kimani, identified a gap in the market for reliable, professionally installed security systems at fair prices. Starting with a team of just three technicians, we quickly gained a reputation for our attention to detail and exceptional customer service.
+                  Our founder, Paul Kim, identified a gap in the market for reliable, professionally installed security systems at fair prices. Starting with a team of just three technicians, we quickly gained a reputation for our attention to detail and exceptional customer service.
                 </p>
                 <p className="text-gray-700 mb-4">
                   Over the years, we've expanded our services to include networking solutions, access control systems, and a wide range of security products. Today, we're proud to serve clients across Kenya from our offices in Nairobi and Mombasa.
@@ -224,7 +224,7 @@ const About = () => {
                 <div className="mx-auto w-16 h-16 bg-kimcom-100 rounded-full flex items-center justify-center mb-4">
                   <Clock className="h-8 w-8 text-kimcom-600" />
                 </div>
-                <h3 className="text-4xl font-bold text-kimcom-700 mb-3">12</h3>
+                <h3 className="text-4xl font-bold text-kimcom-700 mb-3">10</h3>
                 <p className="text-lg font-medium text-gray-800">Years in Business</p>
               </div>
             </div>
