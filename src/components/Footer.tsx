@@ -93,11 +93,11 @@ const Footer = () => {
             <ul className="space-y-4">
               <li className="flex items-start">
                 <MapPin className="h-5 w-5 text-kimcom-400 mr-3 mt-0.5" />
-                <span className="text-gray-400">123 Security Street, Tech City, TC 12345</span>
+                <span className="text-gray-400">KimCom Tower, Ngong Road, Nairobi, Kenya</span>
               </li>
               <li className="flex items-center">
                 <Phone className="h-5 w-5 text-kimcom-400 mr-3" />
-                <span className="text-gray-400">(123) 456-7890</span>
+                <span className="text-gray-400">(254) 740 133 382</span>
               </li>
               <li className="flex items-center">
                 <Mail className="h-5 w-5 text-kimcom-400 mr-3" />
