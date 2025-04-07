@@ -18,7 +18,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 const Checkout = () => {
   const navigate = useNavigate();
   const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'card' | 'ondelivery'>('mpesa');
-  const [mpesaPhone, setMpesaPhone] = useState('');
+  const [mpesaPhone] = useState('0740213382');
+  const [transactionRef, setTransactionRef] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -50,8 +51,8 @@ const Checkout = () => {
   const handleMpesaPayment = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!mpesaPhone || mpesaPhone.length !== 10) {
-      toast.error("Please enter a valid M-Pesa phone number");
+    if (!transactionRef.trim()) {
+      toast.error("Please enter the M-Pesa transaction reference number");
       return;
     }
     
@@ -67,15 +68,49 @@ const Checkout = () => {
     
     setIsProcessing(true);
     
-    // Simulate M-Pesa STK push
-    toast.info("M-Pesa payment request sent. Please check your phone.");
-    
-    // Simulate payment processing
+    // Simulate order processing with transaction reference verification
     setTimeout(() => {
       setIsProcessing(false);
       setIsPaid(true);
-      toast.success("Payment received successfully!");
-    }, 3000);
+      
+      // Save order information to localStorage for admin notification
+      const currentUser = localStorage.getItem('kimcom_current_user');
+      const userId = currentUser ? JSON.parse(currentUser).id : 'guest';
+      
+      const newOrder = {
+        id: `ORD-${Date.now().toString().slice(-6)}`,
+        date: new Date().toISOString(),
+        items: cartProducts,
+        total: total,
+        transactionRef: transactionRef,
+        address: deliveryAddress,
+        status: 'processing',
+        userId: userId
+      };
+      
+      // Store the order in localStorage for admin access
+      const adminNotifications = localStorage.getItem('kimcom_admin_notifications') || '[]';
+      const notifications = JSON.parse(adminNotifications);
+      notifications.push({
+        type: 'new_order',
+        orderId: newOrder.id,
+        timestamp: new Date().toISOString(),
+        message: `New order (${newOrder.id}) with payment reference: ${transactionRef}`,
+        read: false
+      });
+      
+      localStorage.setItem('kimcom_admin_notifications', JSON.stringify(notifications));
+      
+      // Save to user's order history if logged in
+      if (currentUser) {
+        const userOrdersKey = `kimcom_orders_${userId}`;
+        const existingOrders = JSON.parse(localStorage.getItem(userOrdersKey) || '[]');
+        existingOrders.push(newOrder);
+        localStorage.setItem(userOrdersKey, JSON.stringify(existingOrders));
+      }
+      
+      toast.success("Payment reference received! Your order is being processed.");
+    }, 2000);
   };
   
   const handleCardPayment = (e: React.FormEvent) => {
@@ -114,6 +149,43 @@ const Checkout = () => {
     setTimeout(() => {
       setIsProcessing(false);
       setIsPaid(true);
+      
+      // Save order information to localStorage for admin notification
+      const currentUser = localStorage.getItem('kimcom_current_user');
+      const userId = currentUser ? JSON.parse(currentUser).id : 'guest';
+      
+      const newOrder = {
+        id: `ORD-${Date.now().toString().slice(-6)}`,
+        date: new Date().toISOString(),
+        items: cartProducts,
+        total: total,
+        address: deliveryAddress,
+        status: 'pending',
+        paymentStatus: 'pay_on_delivery',
+        userId: userId
+      };
+      
+      // Store the order in localStorage for admin access
+      const adminNotifications = localStorage.getItem('kimcom_admin_notifications') || '[]';
+      const notifications = JSON.parse(adminNotifications);
+      notifications.push({
+        type: 'new_order',
+        orderId: newOrder.id,
+        timestamp: new Date().toISOString(),
+        message: `New order (${newOrder.id}) with payment on delivery`,
+        read: false
+      });
+      
+      localStorage.setItem('kimcom_admin_notifications', JSON.stringify(notifications));
+      
+      // Save to user's order history if logged in
+      if (currentUser) {
+        const userOrdersKey = `kimcom_orders_${userId}`;
+        const existingOrders = JSON.parse(localStorage.getItem(userOrdersKey) || '[]');
+        existingOrders.push(newOrder);
+        localStorage.setItem(userOrdersKey, JSON.stringify(existingOrders));
+      }
+      
       toast.success("Your order has been placed! You'll pay on delivery.");
     }, 2000);
   };
@@ -324,15 +396,25 @@ const Checkout = () => {
                   {paymentMethod === 'mpesa' && !isPaid && (
                     <form onSubmit={handleMpesaPayment} className="mt-4">
                       <div className="space-y-4">
+                        <div className="p-4 bg-green-50 rounded-md text-green-800 mb-2">
+                          <p className="font-medium mb-1">Payment Instructions:</p>
+                          <ol className="list-decimal list-inside space-y-1 text-sm">
+                            <li>Send payment of <strong>KSh {total.toLocaleString()}</strong> to <strong>{mpesaPhone}</strong> via M-Pesa.</li>
+                            <li>After payment, copy the M-Pesa transaction code (e.g. QKL5HTRPNM).</li>
+                            <li>Paste the code below and submit your order.</li>
+                          </ol>
+                        </div>
                         <div>
-                          <Label className="block text-sm font-medium mb-1">M-Pesa Phone Number</Label>
+                          <Label className="block text-sm font-medium mb-1">M-Pesa Transaction Code</Label>
                           <Input 
-                            placeholder="07XXXXXXXX" 
-                            value={mpesaPhone}
-                            onChange={(e) => setMpesaPhone(e.target.value)}
-                            maxLength={10}
+                            placeholder="e.g. QKL5HTRPNM" 
+                            value={transactionRef}
+                            onChange={(e) => setTransactionRef(e.target.value)}
                             disabled={isProcessing}
                           />
+                          <p className="text-xs text-gray-500 mt-1">
+                            This is the confirmation code sent to you by M-Pesa after payment
+                          </p>
                         </div>
                         <Button 
                           type="submit" 
@@ -342,10 +424,10 @@ const Checkout = () => {
                           {isProcessing ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Processing...
+                              Verifying Payment...
                             </>
                           ) : (
-                            'Pay with M-Pesa'
+                            'Confirm Payment'
                           )}
                         </Button>
                       </div>
@@ -414,11 +496,11 @@ const Checkout = () => {
                     <div className="text-center py-4">
                       <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
                       <h3 className="text-xl font-bold text-green-700 mb-2">
-                        {paymentMethod === 'ondelivery' ? 'Order Placed Successfully' : 'Payment Successful'}
+                        {paymentMethod === 'ondelivery' ? 'Order Placed Successfully' : 'Payment Confirmed'}
                       </h3>
                       <p className="text-gray-600 mb-4">
                         {paymentMethod === 'mpesa' 
-                          ? 'Your M-Pesa payment has been received.' 
+                          ? `Your payment reference (${transactionRef}) has been received.` 
                           : paymentMethod === 'ondelivery'
                             ? 'Your order has been confirmed. You will pay on delivery.'
                             : 'Your payment has been processed successfully.'}
