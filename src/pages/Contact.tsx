@@ -53,7 +53,39 @@ const Contact = () => {
 
   const onSubmit = (data: FormValues) => {
     console.log(data);
-    toast.success("Your message has been sent! We'll get back to you soon.");
+    
+    // Format the message for WhatsApp
+    const whatsappMessage = `
+*New Contact Form Submission*
+---------------------------
+*Name:* ${data.name}
+*Email:* ${data.email}
+*Phone:* ${data.phone}
+*Subject:* ${data.subject}
+*Message:* ${data.message}
+---------------------------
+Sent from KimCom Website
+`;
+
+    // Create the WhatsApp URL with the message 
+    // The number format should be international format without + or spaces
+    const encodedMessage = encodeURIComponent(whatsappMessage);
+    const whatsappURL = `https://wa.me/254740133382?text=${encodedMessage}`;
+    
+    // Save to local storage for admin dashboard
+    const messages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+    messages.push({
+      id: Date.now(),
+      ...data,
+      timestamp: new Date().toISOString(),
+      read: false
+    });
+    localStorage.setItem('contactMessages', JSON.stringify(messages));
+    
+    // Open WhatsApp in a new tab
+    window.open(whatsappURL, '_blank');
+    
+    toast.success("Your message has been sent! Redirecting to WhatsApp.");
     form.reset();
   };
 

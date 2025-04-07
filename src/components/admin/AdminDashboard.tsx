@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart2, Package, Users, DollarSign, ArrowUpRight, ArrowDownRight, ShoppingCart, TrendingUp } from 'lucide-react';
@@ -7,8 +6,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useNavigate } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import ContactMessages from './ContactMessages';
 
-// Sample data for charts
 const salesData = [
   { name: 'Jan', sales: 4000, customers: 2400, amt: 2400 },
   { name: 'Feb', sales: 3000, customers: 1398, amt: 2210 },
@@ -19,7 +18,6 @@ const salesData = [
   { name: 'Jul', sales: 3490, customers: 4300, amt: 2100 },
 ];
 
-// Sample best-selling products
 const topProducts = [
   {
     id: '1',
@@ -133,6 +131,8 @@ const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      <ContactMessages />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
