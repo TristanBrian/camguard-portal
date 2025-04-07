@@ -37,6 +37,8 @@ const ProductManager: React.FC = () => {
     const newProduct = {
       id: `p${Date.now().toString().slice(-5)}`,
       ...productData,
+      price: Number(productData.price),
+      stock: Number(productData.stock),
       image: productData.imageUrl || (productData.image ? URL.createObjectURL(productData.image) : '/placeholder.svg'),
       difficulty: productData.difficulty || 'Medium', // Default difficulty
     };
@@ -53,6 +55,8 @@ const ProductManager: React.FC = () => {
       product.id === editingProduct.id ? {
         ...product,
         ...productData,
+        price: Number(productData.price),
+        stock: Number(productData.stock),
         image: productData.imageUrl || (productData.image ? URL.createObjectURL(productData.image) : product.image),
       } : product
     );
@@ -316,7 +320,15 @@ const ProductManager: React.FC = () => {
           <TabsContent value="edit">
             <ProductForm 
               onSubmit={handleUpdateProduct}
-              initialData={editingProduct}
+              initialData={{
+                name: editingProduct.name,
+                price: String(editingProduct.price),
+                category: editingProduct.category,
+                description: editingProduct.description,
+                sku: editingProduct.sku,
+                stock: String(editingProduct.stock),
+                image: editingProduct.image,
+              }}
               isEditing={true}
             />
           </TabsContent>
