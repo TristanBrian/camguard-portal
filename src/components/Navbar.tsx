@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [cartItemCount, setCartItemCount] = useState(0);
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
@@ -15,9 +16,56 @@ const Navbar = () => {
     // Check if user is logged in
     const user = localStorage.getItem('kimcom_current_user');
     if (user) {
-      setCurrentUser(JSON.parse(user));
+      const userData = JSON.parse(user);
+      setCurrentUser(userData);
+      
+      // Load user's cart count
+      const userCartKey = `kimcom_cart_${userData.id}`;
+      const savedCart = localStorage.getItem(userCartKey);
+      if (savedCart) {
+        const cartItems = JSON.parse(savedCart);
+        setCartItemCount(cartItems.reduce((total: number, item: any) => total + item.quantity, 0));
+      }
+    } else {
+      // Check anonymous cart
+      const anonymousCart = localStorage.getItem('cartItems');
+      if (anonymousCart) {
+        const cartItems = JSON.parse(anonymousCart);
+        setCartItemCount(cartItems.reduce((total: number, item: any) => total + item.quantity, 0));
+      }
     }
   }, []);
+
+  // Update cart count whenever localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      if (currentUser) {
+        const userCartKey = `kimcom_cart_${currentUser.id}`;
+        const savedCart = localStorage.getItem(userCartKey);
+        if (savedCart) {
+          const cartItems = JSON.parse(savedCart);
+          setCartItemCount(cartItems.reduce((total: number, item: any) => total + item.quantity, 0));
+        }
+      } else {
+        const anonymousCart = localStorage.getItem('cartItems');
+        if (anonymousCart) {
+          const cartItems = JSON.parse(anonymousCart);
+          setCartItemCount(cartItems.reduce((total: number, item: any) => total + item.quantity, 0));
+        }
+      }
+    };
+
+    // Set up event listener for storage changes
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Poll for changes since the storage event won't fire in the same tab
+    const interval = setInterval(handleStorageChange, 2000);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [currentUser]);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -31,6 +79,14 @@ const Navbar = () => {
     localStorage.removeItem('kimcom_current_user');
     setCurrentUser(null);
     navigate('/');
+  };
+
+  const handleProfileClick = () => {
+    navigate('/profile');
+  };
+
+  const handleCartClick = () => {
+    navigate('/products');
   };
 
   return (
@@ -65,7 +121,7 @@ const Navbar = () => {
           </nav>
 
           {/* Action Buttons */}
-          <div className="hidden md:flex items-center space-x-2">
+          <div className="hidden md:flex items-center space-x-3">
             <Button 
               variant="outline" 
               size="sm" 
@@ -73,11 +129,28 @@ const Navbar = () => {
               onClick={handleCallButton}
             >
               <Phone className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />
-              <span className="hidden sm:inline">0740213382</span>
+              <span className="hidden lg:inline">0740213382</span>
+            </Button>
+            
+            <Button 
+              onClick={handleCartClick}
+              size="sm"
+              variant="outline"
+              className="relative"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              {cartItemCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {cartItemCount}
+                </span>
+              )}
             </Button>
             
             <Link to="/products">
-              <Button className="bg-kimcom-600 hover:bg-kimcom-700 flex items-center gap-1 text-xs lg:text-sm">
+              <Button 
+                className="bg-kimcom-600 hover:bg-kimcom-700 flex items-center gap-1 text-xs lg:text-sm" 
+                size="sm"
+              >
                 <ShoppingCart className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />
                 <span>Shop Now</span>
               </Button>
@@ -86,10 +159,24 @@ const Navbar = () => {
             {currentUser ? (
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-700 hidden lg:block">Hi, {currentUser.fullName.split(' ')[0]}</span>
-                <Button variant="ghost" size="sm" className="flex items-center gap-1 text-gray-600 hover:text-kimcom-600" onClick={handleLogout}>
-                  <LogOut className="h-4 w-4" />
-                  <span className="hidden lg:inline">Logout</span>
-                </Button>
+                <div className="flex space-x-1">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="flex items-center gap-1 text-gray-600 hover:text-kimcom-600"
+                    onClick={handleProfileClick}
+                  >
+                    <UserCircle2 className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="flex items-center gap-1 text-gray-600 hover:text-kimcom-600" 
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ) : (
               <Link to="/login">
@@ -169,6 +256,14 @@ const Navbar = () => {
                 <div className="block px-3 py-2 text-base font-medium text-gray-700">
                   Signed in as <span className="font-semibold">{currentUser.fullName}</span>
                 </div>
+                <Link 
+                  to="/profile" 
+                  className="flex w-full items-center px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <UserCircle2 className="h-5 w-5 mr-2" />
+                  My Profile
+                </Link>
                 <button
                   className="flex w-full px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
                   onClick={() => {
@@ -201,10 +296,36 @@ const Navbar = () => {
             )}
             
             <div className="flex flex-col space-y-2 pt-4">
-              <Button variant="outline" size="sm" className="flex items-center justify-center gap-1" onClick={handleCallButton}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center justify-center gap-1"
+                onClick={handleCallButton}
+              >
                 <Phone className="h-4 w-4" />
                 <span>0740213382</span>
               </Button>
+              
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  className="relative flex-1 justify-center"
+                  onClick={() => {
+                    navigate('/products');
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  Cart
+                  {cartItemCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {cartItemCount}
+                    </span>
+                  )}
+                </Button>
+              </div>
+              
               <Link to="/products" onClick={() => setIsMenuOpen(false)}>
                 <Button className="bg-kimcom-600 hover:bg-kimcom-700 flex items-center justify-center gap-1 w-full">
                   <ShoppingCart className="h-4 w-4" />

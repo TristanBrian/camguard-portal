@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -22,9 +22,49 @@ const Products = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // In a real app, this would come from auth context
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [cartItems, setCartItems] = useState<{id: string, quantity: number}[]>([]);
   
+  // Load user and cart data on component mount
+  useEffect(() => {
+    // Check if user is logged in
+    const user = localStorage.getItem('kimcom_current_user');
+    if (user) {
+      const userData = JSON.parse(user);
+      setCurrentUser(userData);
+      setIsLoggedIn(true);
+      
+      // Load user's cart from localStorage
+      const userCartKey = `kimcom_cart_${userData.id}`;
+      const savedCart = localStorage.getItem(userCartKey);
+      if (savedCart) {
+        setCartItems(JSON.parse(savedCart));
+      } else {
+        setCartItems([]);
+      }
+    } else {
+      // Load anonymous cart
+      const anonymousCart = localStorage.getItem('cartItems');
+      if (anonymousCart) {
+        setCartItems(JSON.parse(anonymousCart));
+      }
+    }
+  }, []);
+  
+  // Save cart whenever it changes
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      if (currentUser) {
+        // Save cart for logged in user
+        localStorage.setItem(`kimcom_cart_${currentUser.id}`, JSON.stringify(cartItems));
+      } else {
+        // Save anonymous cart
+        localStorage.setItem('cartItems', JSON.stringify(cartItems));
+      }
+    }
+  }, [cartItems, currentUser]);
+
   // Get unique categories for the filter
   const categories = ['All', ...new Set(productsData.map(product => product.category))];
 
@@ -58,6 +98,16 @@ const Products = () => {
   const handleCheckout = () => {
     if (cartItems.length === 0) {
       toast.error("Your cart is empty");
+      return;
+    }
+    
+    if (!isLoggedIn) {
+      toast.info("Please login to continue with checkout", {
+        action: {
+          label: "Login",
+          onClick: () => navigate('/login')
+        },
+      });
       return;
     }
     
@@ -128,7 +178,7 @@ const Products = () => {
                   className="bg-kimcom-600 hover:bg-kimcom-700"
                   disabled={cartItemCount === 0}
                 >
-                  Proceed to Checkout
+                  {isLoggedIn ? 'Proceed to Checkout' : 'Login to Checkout'}
                 </Button>
               </div>
             </div>
