@@ -4,6 +4,16 @@ import { Button } from '@/components/ui/button';
 import { ShieldCheck, Video, Wifi } from 'lucide-react';
 
 const Hero = () => {
+  const handleWhatsAppClick = () => {
+    // Format phone number for WhatsApp link
+    const phoneNumber = "254740133382"; // Phone number in international format
+    const message = encodeURIComponent("Subject: Enquiry\n\nHello, I would like to request a quote for your services.");
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+    
+    // Open WhatsApp in a new tab
+    window.open(whatsappUrl, '_blank');
+  };
+
   return (
     <div className="relative bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto px-4 py-20 sm:px-6 lg:px-8">
@@ -20,7 +30,7 @@ const Hero = () => {
               KimCom Solutions provides professional CCTV installation, maintenance, networking equipment, and security solutions for homes and businesses.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="bg-kimcom-600 hover:bg-kimcom-700">
+              <Button size="lg" className="bg-kimcom-600 hover:bg-kimcom-700" onClick={handleWhatsAppClick}>
                 Request a Quote
               </Button>
               <Button size="lg" variant="outline">
