@@ -1,7 +1,5 @@
 # CamGuard Portal - Admin Dashboard & E-commerce Platform
 
-![Project Logo](public/placeholder.svg)
-
 A modern admin dashboard and e-commerce platform built with React, TypeScript, and shadcn-ui components.
 
 ## Features
@@ -131,6 +129,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ## Contact
 
 Your Name - Tristan.Dev
+
 Email - lessusbrian7@gmail.com
 
-Project Link: 
+Project Link:  https://camguard.netlify.app/
