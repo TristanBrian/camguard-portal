@@ -1,73 +1,136 @@
-# Welcome to your Lovable project
+# CamGuard Portal - Admin Dashboard & E-commerce Platform
 
-## Project info
+![Project Logo](public/placeholder.svg)
 
-**URL**: https://lovable.dev/projects/709b60c4-ed05-4dde-bcac-12dbcd891749
+A modern admin dashboard and e-commerce platform built with React, TypeScript, and shadcn-ui components.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- **Admin Dashboard** with statistics, product management, and market trends
+- **E-commerce** functionality with product listings and checkout
+- **Responsive Design** built with Tailwind CSS
+- **UI Components** from shadcn-ui library
+- **Authentication** for admin and user login
 
-**Use Lovable**
+## Technologies Used
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/709b60c4-ed05-4dde-bcac-12dbcd891749) and start prompting.
+- ⚡ [Vite](https://vitejs.dev/) - Next generation frontend tooling
+- 🚀 [React](https://reactjs.org/) - JavaScript library for building user interfaces
+- 💻 [TypeScript](https://www.typescriptlang.org/) - Typed JavaScript
+- 🎨 [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
+- ✨ [shadcn-ui](https://ui.shadcn.com/) - Beautifully designed components
+- 📊 [React Charts](https://react-charts.tanstack.com/) - Data visualization
 
-Changes made via Lovable will be committed automatically to this repo.
+## Project Structure
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+camguard-portal/
+├── public/            # Static files
+├── src/
+│   ├── components/    # Reusable components
+│   │   ├── admin/     # Admin-specific components
+│   │   ├── ui/        # UI components from shadcn-ui
+│   ├── data/          # Mock data and constants
+│   ├── hooks/         # Custom React hooks
+│   ├── lib/           # Utility functions
+│   ├── pages/         # Page components
+│   │   ├── admin/     # Admin pages
+│   └── App.tsx        # Main application component
+├── .gitignore
+├── package.json
+├── tsconfig.json
+└── vite.config.ts
 ```
 
-**Edit a file directly in GitHub**
+## Getting Started
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Prerequisites
 
-**Use GitHub Codespaces**
+- Node.js (v18 or higher)
+- npm (v9 or higher) or bun
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Installation
 
-## What technologies are used for this project?
+1. Clone the repository:
+```bash
+git clone https://github.com/TristanBrian/camguard-portal.git
+cd camguard-portal
+```
 
-This project is built with .
+2. Install dependencies:
+```bash
+npm install
+# or
+bun install
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+3. Start the development server:
+```bash
+npm run dev
+# or
+bun run dev
+```
 
-## How can I deploy this project?
+The application will be available at `http://localhost:5173`
 
-Simply open [Lovable](https://lovable.dev/projects/709b60c4-ed05-4dde-bcac-12dbcd891749) and click on Share -> Publish.
+## Available Scripts
 
-## Can I connect a custom domain to my Lovable project?
+- `dev` - Start development server
+- `build` - Build for production
+- `preview` - Preview production build
+- `lint` - Run ESLint
+- `typecheck` - Run TypeScript type checking
 
-Yes it is!
+## Deployment
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Vercel
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+1. Install Vercel CLI:
+```bash
+npm install -g vercel
+```
+
+2. Deploy:
+```bash
+vercel
+```
+
+### Netlify
+
+1. Install Netlify CLI:
+```bash
+npm install -g netlify-cli
+```
+
+2. Deploy:
+```bash
+netlify deploy
+```
+
+## Environment Variables
+
+Create a `.env` file in the root directory with the following variables:
+
+```
+VITE_API_URL=your_api_url
+VITE_ADMIN_TOKEN=your_admin_token
+```
+
+## Contributing
+
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+## Contact
+
+Your Name - Tristan.Dev
+Email - lessusbrian7@gmail.com
+
+Project Link: 
