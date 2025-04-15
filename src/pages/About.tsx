@@ -5,27 +5,8 @@ import CTASection from '@/components/CTASection';
 import { Award, CheckCircle, Shield, Users, Target, Star, Clock } from 'lucide-react';
 const About = () => {
   // Our team members
-  const teamMembers = [{
-    name: "John Kimani",
-    role: "Founder & CEO",
-    bio: "John has over 15 years of experience in the security industry and founded KimCom Solutions to provide reliable security solutions to businesses and homeowners.",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d"
-  }, {
-    name: "Sarah Wanjiku",
-    role: "Technical Director",
-    bio: "With a background in electrical engineering, Sarah leads our technical team and ensures the highest standards in all installations.",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330"
-  }, {
-    name: "David Mwangi",
-    role: "Operations Manager",
-    bio: "David oversees our day-to-day operations and ensures that our service delivery is timely and of the highest quality.",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e"
-  }, {
-    name: "Grace Kamau",
-    role: "Customer Relations",
-    bio: "Grace is dedicated to ensuring our clients receive exceptional support and maintains our reputation for excellent customer service.",
-    image: "https://images.unsplash.com/photo-1580489944761-15a19d654956"
-  }];
+  //const teamMembers = [{
+  
 
   // Our values
   const values = [{
