@@ -50,7 +50,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent the card click event from firing
+    
     if (onAddToCart) {
       onAddToCart();
     } else {
@@ -59,11 +61,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
-  const handleViewDetails = () => {
+  const handleCardClick = () => {
     if (onViewDetails) {
       onViewDetails();
     } else {
-      navigate(`/products?id=${id}`);
+      navigate(`/product-details/${id}`);
     }
   };
 
@@ -71,12 +73,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const isOutOfStock = stock !== undefined && stock === 0;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover-animate overflow-hidden h-full flex flex-col">
+    <div 
+      className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden h-full flex flex-col cursor-pointer"
+      onClick={handleCardClick}
+    >
       <div className="relative">
         <img 
           src={image} 
           alt={name}
-          className="w-full h-48 object-cover"
+          className="w-full h-48 object-contain p-2"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             target.src = '/placeholder.svg';
@@ -126,7 +131,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={handleViewDetails}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onViewDetails) onViewDetails();
+              }}
               className="text-gray-600 hover:text-kimcom-600"
             >
               <Info className="h-4 w-4" />

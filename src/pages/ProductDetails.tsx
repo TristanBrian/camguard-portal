@@ -8,50 +8,39 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ShoppingCart, ArrowLeft, Star } from 'lucide-react';
 import { toast } from 'sonner';
+import { productsData } from '@/data/productsData';
 
 const ProductDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // In a real app, this would come from auth context
-  
-  // Sample product data - in a real app, this would come from a database
-  const productsData = [
-    {
-      id: "p1",
-      name: "HD Dome Camera",
-      description: "1080p indoor security camera with night vision and motion detection.",
-      longDescription: "This high-definition dome camera offers crystal-clear 1080p video, making it ideal for indoor security monitoring. With advanced night vision capabilities of up to 30 feet in complete darkness and built-in motion detection, you'll receive alerts whenever activity is detected. The sleek dome design allows for discrete installation on ceilings or walls, and its wide-angle lens ensures maximum coverage of your space.",
-      price: 8999,
-      image: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81",
-      category: "Indoor",
-      difficulty: "Easy" as const,
-      features: [
-        "1080p HD resolution",
-        "Night vision up to 30ft",
-        "Motion detection alerts",
-        "Easy ceiling/wall mounting",
-        "Wide-angle lens",
-        "Compatible with NVR systems"
-      ],
-      specs: {
-        resolution: "1920 x 1080",
-        sensor: "1/2.7\" CMOS",
-        lens: "2.8mm",
-        nightVision: "30ft / 10m",
-        powerSupply: "DC 12V",
-        dimensions: "110mm x 80mm"
-      },
-      stock: 15
-    },
-    // ... add more detailed product data for other products
-  ];
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [cartItems, setCartItems] = useState<{id: string, quantity: number}[]>([]);
   
   useEffect(() => {
-    // In a real app, this would be an API call to fetch product details
+    const user = localStorage.getItem('kimcom_current_user');
+    if (user) {
+      const userData = JSON.parse(user);
+      setIsLoggedIn(true);
+      
+      const userCartKey = `kimcom_cart_${userData.id}`;
+      const savedCart = localStorage.getItem(userCartKey);
+      if (savedCart) {
+        setCartItems(JSON.parse(savedCart));
+      }
+    } else {
+      const anonymousCart = localStorage.getItem('cartItems');
+      if (anonymousCart) {
+        setCartItems(JSON.parse(anonymousCart));
+      }
+    }
+  }, []);
+  
+  useEffect(() => {
     const fetchProduct = () => {
       setLoading(true);
+      // Use the real product data instead of the sample data
       const foundProduct = productsData.find(p => p.id === id) || null;
       setProduct(foundProduct);
       setLoading(false);
@@ -61,10 +50,27 @@ const ProductDetails = () => {
   }, [id]);
   
   const handleAddToCart = () => {
-    if (!isLoggedIn) {
-      toast.error("Please login to add items to your cart");
-      navigate('/admin-login');
-      return;
+    if (!product) return;
+    
+    const existingItem = cartItems.find(item => item.id === product.id);
+    
+    let newCartItems;
+    if (existingItem) {
+      newCartItems = cartItems.map(item => 
+        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+      );
+    } else {
+      newCartItems = [...cartItems, { id: product.id, quantity: 1 }];
+    }
+    
+    setCartItems(newCartItems);
+    
+    // Save to localStorage
+    if (isLoggedIn) {
+      const user = JSON.parse(localStorage.getItem('kimcom_current_user') || '{}');
+      localStorage.setItem(`kimcom_cart_${user.id}`, JSON.stringify(newCartItems));
+    } else {
+      localStorage.setItem('cartItems', JSON.stringify(newCartItems));
     }
     
     toast.success(`Added ${product.name} to cart`);
@@ -77,8 +83,7 @@ const ProductDetails = () => {
       return;
     }
     
-    // Add to cart and navigate to checkout
-    toast.success(`Added ${product.name} to cart`);
+    handleAddToCart();
     navigate('/checkout');
   };
   
@@ -132,8 +137,12 @@ const ProductDetails = () => {
               <img 
                 src={product.image} 
                 alt={product.name} 
-                className="w-full h-full object-contain object-center"
+                className="w-full h-full object-contain object-center p-4"
                 style={{ maxHeight: '500px' }}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = '/placeholder.svg';
+                }}
               />
             </div>
             
@@ -141,13 +150,22 @@ const ProductDetails = () => {
             <div>
               <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
               
-              <div className="flex items-center mb-4">
-                <div className="flex text-yellow-400 mr-2">
+              <div className="flex items-center gap-2 mb-4">
+                {product.brand && (
+                  <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                    {product.brand}
+                  </span>
+                )}
+                {product.model && (
+                  <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                    {product.model}
+                  </span>
+                )}
+                <div className="flex text-yellow-400 ml-auto">
                   {[1, 2, 3, 4, 5].map(star => (
                     <Star key={star} className="h-5 w-5" fill="currentColor" />
                   ))}
                 </div>
-                <span className="text-gray-600">(24 reviews)</span>
               </div>
               
               <p className="text-2xl font-bold text-kimcom-600 mb-4">
@@ -155,7 +173,7 @@ const ProductDetails = () => {
               </p>
               
               <div className="mb-6">
-                <p className="text-gray-700">{product.longDescription || product.description}</p>
+                <p className="text-gray-700">{product.description}</p>
               </div>
               
               {/* Stock Status */}
@@ -235,8 +253,6 @@ const ProductDetails = () => {
               </CardContent>
             </Card>
           )}
-          
-          {/* Related Products would go here */}
         </div>
       </main>
       

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
+import ProductDetailPopup from '@/components/ProductDetailPopup';
 import { Button } from '@/components/ui/button';
 import { 
   ArrowLeft, 
@@ -17,7 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { productsData } from '@/data/productsData';
+import { productsData, Product } from '@/data/productsData';
 import { 
   Popover,
   PopoverContent,
@@ -32,6 +33,8 @@ const Products = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [cartItems, setCartItems] = useState<{id: string, quantity: number}[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductDetailOpen, setIsProductDetailOpen] = useState(false);
   
   useEffect(() => {
     const user = localStorage.getItem('kimcom_current_user');
@@ -69,7 +72,7 @@ const Products = () => {
     }
   }, [cartItems, currentUser]);
 
-  const categories = ['All', 'Dahua Tech', 'D-Link', 'TP-Link', 'Tender'];
+  const categories = ['All', 'Dahua Tech', 'D-Link', 'TP-Link', 'Recorder', 'Networking'];
 
   const filteredProducts = productsData.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -79,7 +82,13 @@ const Products = () => {
   });
 
   const handleViewDetails = (id: string) => {
-    navigate(`/product-details/${id}`);
+    const product = productsData.find(p => p.id === id);
+    if (product) {
+      setSelectedProduct(product);
+      setIsProductDetailOpen(true);
+    } else {
+      navigate(`/product-details/${id}`);
+    }
   };
 
   const handleAddToCart = (id: string) => {
@@ -167,8 +176,12 @@ const Products = () => {
   const cartTotal = cartProductDetails.reduce((total, item) => 
     total + (item.price * item.quantity), 0);
 
-  const onProductAddToCart = (id: string) => {
-    handleAddToCart(id);
+  const onProductAddToCart = (product: Product) => {
+    handleAddToCart(product.id);
+  };
+
+  const onProductCardClick = (id: string) => {
+    handleViewDetails(id);
   };
 
   return (
@@ -354,8 +367,10 @@ const Products = () => {
                     category={product.category}
                     difficulty={product.difficulty}
                     stock={product.stock}
-                    onViewDetails={() => handleViewDetails(product.id)}
-                    onAddToCart={() => onProductAddToCart(product.id)}
+                    brand={product.brand}
+                    model={product.model}
+                    onViewDetails={() => onProductCardClick(product.id)}
+                    onAddToCart={() => onProductAddToCart(product)}
                   />
                 ))}
               </div>
@@ -383,6 +398,102 @@ const Products = () => {
       </main>
 
       <Footer />
+      
+      <ProductDetailPopup
+        product={selectedProduct}
+        isOpen={isProductDetailOpen}
+        onClose={() => setIsProductDetailOpen(false)}
+        onAddToCart={onProductAddToCart}
+      />
+      
+      <Popover open={isCartOpen} onOpenChange={setIsCartOpen}>
+        <PopoverTrigger asChild>
+          <Button 
+            variant="outline"
+            className="relative"
+          >
+            <ShoppingCart className="h-5 w-5 mr-2" />
+            Cart
+            {cartItemCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                {cartItemCount}
+              </span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-80 p-4">
+          <h3 className="font-semibold text-lg mb-2">Your Cart</h3>
+          {cartItems.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-gray-500">Your cart is empty</p>
+              <Button variant="outline" className="mt-2" onClick={() => setIsCartOpen(false)}>
+                Browse Products
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="max-h-60 overflow-y-auto space-y-2">
+                {cartProductDetails.map(item => (
+                  <div key={item.id} className="flex items-center justify-between py-2 border-b">
+                    <div className="flex items-center">
+                      <img 
+                        src={item.image} 
+                        alt={item.name} 
+                        className="w-10 h-10 object-cover rounded mr-2" 
+                      />
+                      <div>
+                        <p className="font-medium text-sm">{item.name}</p>
+                        <p className="text-xs text-gray-500">KSh {item.price.toLocaleString()} × {item.quantity}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6 rounded-full" 
+                        onClick={() => handleRemoveFromCart(item.id)}
+                      >
+                        <MinusCircle className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6 rounded-full text-red-500 hover:text-red-700 hover:bg-red-50" 
+                        onClick={() => handleDeleteFromCart(item.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 space-y-3">
+                <div className="flex justify-between font-semibold">
+                  <span>Total:</span>
+                  <span>KSh {cartTotal.toLocaleString()}</span>
+                </div>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    onClick={handleEmptyCart}
+                  >
+                    Empty Cart
+                  </Button>
+                  <Button 
+                    className="flex-1 bg-kimcom-600 hover:bg-kimcom-700"
+                    size="sm"
+                    onClick={handleCheckout}
+                  >
+                    Checkout
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </PopoverContent>
+      </Popover>
     </div>
   );
 };
