@@ -29,23 +29,16 @@ const About = () => {
 
   // Milestones
   const milestones = [{
-    year: "2010",
+    year: "2019",
     title: "Company Founding",
     description: "KimCom Solutions was established in Nairobi."
-  }, {
-    year: "2013",
-    title: "Expansion",
-    description: "Opened second office in Mombasa to serve the coastal region."
-  }, {
-    year: "2016",
-    title: "ISO Certification",
-    description: "Achieved ISO 9001 certification for quality management."
-  }, {
-    year: "2019",
+  },
+    {
+    year: "2021",
     title: "Product Range Expansion",
     description: "Began offering networking products and services."
   }, {
-    year: "2022",
+    year: "2024",
     title: "Online Store Launch",
     description: "Launched e-commerce platform for security products."
   }];
@@ -73,13 +66,13 @@ const About = () => {
               <div>
                 <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Story</h2>
                 <p className="text-gray-700 mb-4">
-                  Founded in 2017, KimCom Solutions began as a small CCTV installation company with a big vision: to make high-quality security systems accessible to everyone in Kenya.
+                  Founded in 2019, KimCom Solutions began as a small CCTV installation company with a big vision: to make high-quality security systems accessible to everyone in Kenya.
                 </p>
                 <p className="text-gray-700 mb-4">
                   Our founder, Paul Kim, identified a gap in the market for reliable, professionally installed security systems at fair prices. Starting with a team of just three technicians, we quickly gained a reputation for our attention to detail and exceptional customer service.
                 </p>
                 <p className="text-gray-700 mb-4">
-                  Over the years, we've expanded our services to include networking solutions, access control systems, and a wide range of security products. Today, we're proud to serve clients across Kenya from our offices in Nairobi and Mombasa.
+                  Over the years, we've expanded our services to include networking solutions, access control systems, and a wide range of security products. Today, we're proud to serve clients across Kenya from our offices in Nairobi.
                 </p>
                 <p className="text-gray-700">
                   Despite our growth, we remain committed to our original mission: providing peace of mind through superior security solutions that are tailored to each client's specific needs.
@@ -111,28 +104,8 @@ const About = () => {
           </div>
         </section>
 
-        {/* Our Team */}
-        <section className="py-16 bg-white">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Meet Our Team</h2>
-              <p className="text-xl text-gray-600">
-                The dedicated professionals behind KimCom Solutions
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {teamMembers.map((member, index) => <div key={index} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                  <img src={member.image} alt={member.name} className="w-full h-64 object-cover" />
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold mb-1">{member.name}</h3>
-                    <p className="text-kimcom-600 font-medium mb-3">{member.role}</p>
-                    <p className="text-gray-600">{member.bio}</p>
-                  </div>
-                </div>)}
-            </div>
-          </div>
-        </section>
+        {/* Our Gallery*/}
+             
 
         {/* Achievements */}
         <section className="py-16 bg-gray-50">
@@ -165,7 +138,7 @@ const About = () => {
                 <div className="mx-auto w-16 h-16 bg-kimcom-100 rounded-full flex items-center justify-center mb-4">
                   <Clock className="h-8 w-8 text-kimcom-600" />
                 </div>
-                <h3 className="text-4xl font-bold text-kimcom-700 mb-3">10</h3>
+                <h3 className="text-4xl font-bold text-kimcom-700 mb-3">6</h3>
                 <p className="text-lg font-medium text-gray-800">Years in Business</p>
               </div>
             </div>
