@@ -14,8 +14,9 @@ const Hero = () => {
     window.open(whatsappUrl, '_blank');
   };
   
-  return <div className="relative bg-gradient-to-b from-gray-50 to-white">
-      <div className="container mx-auto px-4 py-20 sm:px-6 lg:px-8">
+  return (
+    <div className="relative bg-gradient-to-b from-gray-50 to-white">
+      <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="max-w-xl animate-fade-up">
             <div className="inline-flex items-center px-4 py-2 rounded-full bg-kimcom-100 text-kimcom-800 mb-6">
@@ -54,11 +55,11 @@ const Hero = () => {
           </div>
           
           <div className="relative">
-            <div className="bg-white p-3 rounded-xl shadow-xl overflow-hidden h-[400px]">
+            <div className="bg-white p-4 rounded-xl shadow-xl overflow-hidden">
               <img 
                 src="/lovable-uploads/7e3926fc-037b-40b1-9918-f51c15515c59.png" 
                 alt="KimCom Security Products Showcase" 
-                className="w-full h-full rounded-lg object-cover object-center"
+                className="w-full aspect-[4/3] rounded-lg object-cover object-center"
               />
             </div>
             <div className="absolute -bottom-6 -left-6 bg-kimcom-600 text-white p-4 rounded-lg shadow-lg">
@@ -72,7 +73,8 @@ const Hero = () => {
           </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
 
 export default Hero;

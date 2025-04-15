@@ -1,4 +1,3 @@
-
 export interface Product {
   id: string;
   name: string;
@@ -18,9 +17,9 @@ export const productsData: Product[] = [
   {
     id: "p1",
     name: "Dahua DH-HAC-T1A21P 2MP Eyeball Camera",
-    description: "2MP 1080P camera that gives you a full HD video experience at an affordable price. Supports multiple video formats including HDCVI, CVBS and other common HD analog formats in the market.",
+    description: "The Dahua DH-HAC-T1A21P 2MP is a 2MP 1080P camera that gives you a full HD video experience at an affordable price. The camera supports multiple video formats including HDCVI, CVBS and other common HD analog formats in the market.",
     price: 8999,
-    image: "/lovable-uploads/1ce459df-ccce-492c-8746-029902369859.png",
+    image: "/lovable-uploads/eec54a61-fec4-4ab4-86ae-af63f1331531.png",
     category: "Dahua Tech",
     difficulty: "Easy",
     stock: 24,
@@ -40,7 +39,7 @@ export const productsData: Product[] = [
     name: "Dahua DH-HAC-B1A21P 2MP Bullet Camera",
     description: "2MP Bullet Camera with switchable video formats for compatible integration with most HD/SD DVRs.",
     price: 9999,
-    image: "/lovable-uploads/455c6412-3219-47aa-a853-e33a9ef09c1c.png",
+    image: "/lovable-uploads/adb0b881-8c8f-4542-b73c-cdcb43015dc7.png",
     category: "Dahua Tech",
     difficulty: "Medium",
     stock: 18,
@@ -59,7 +58,7 @@ export const productsData: Product[] = [
     name: "Dahua DH-1PC-HFW2449M-S-B-PRO",
     description: "4MP High-Resolution Video security camera with full-color night vision and smart motion detection.",
     price: 15999,
-    image: "/lovable-uploads/fc5a8faf-be2d-4770-8589-d1c96470713f.png",
+    image: "/lovable-uploads/fe4d1c2a-f0d8-45fc-a732-eec5cfce54c0.png",
     category: "Dahua Tech",
     difficulty: "Medium",
     stock: 15,
@@ -82,7 +81,7 @@ export const productsData: Product[] = [
     name: "Dahua DH-1PC-HFW244TL-S-PRO",
     description: "4MP HD resolution camera with IR night vision and weatherproof design for reliable outdoor use.",
     price: 14999,
-    image: "/lovable-uploads/ffed2d42-4188-4317-8712-674245b22030.png",
+    image: "/lovable-uploads/de5c2337-6aff-4711-8af0-74bf02c3275b.png",
     category: "Dahua Tech",
     difficulty: "Medium",
     stock: 12,
@@ -103,7 +102,7 @@ export const productsData: Product[] = [
     name: "Dahua 5MP HDCVI Bullet Camera",
     description: "High-end 5MP HDCVI Bullet Camera with motorized lens and extended IR range for superior surveillance coverage.",
     price: 22999,
-    image: "/lovable-uploads/64fc0dc4-8c99-4edc-a812-bbc687721c7c.png",
+    image: "/lovable-uploads/c245619a-b9a2-4fe0-a7a1-89f3e094711f.png",
     category: "Dahua Tech",
     difficulty: "Advanced",
     stock: 8,
@@ -124,9 +123,9 @@ export const productsData: Product[] = [
   {
     id: "p6",
     name: "Dahua DH-HAC-HDW1209TLQP-LED",
-    description: "2MP HDCVI Full-Color Eyeball Camera designed for superior color imaging in low-light environments.",
+    description: "2MP HDCVI Full-Color Eyeball Camera, designed for superior color imaging in low-light environments, making it a reliable choice for round-the-clock surveillance.",
     price: 12999,
-    image: "/lovable-uploads/6c944901-f5c0-45af-a87c-f5360814cea8.png",
+    image: "/lovable-uploads/4d7d7c96-f334-4ae6-b306-a2d5888a5446.png",
     category: "Dahua Tech",
     difficulty: "Easy",
     stock: 20,
