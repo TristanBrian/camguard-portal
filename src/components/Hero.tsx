@@ -1,6 +1,8 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ShieldCheck, Video, Wifi } from 'lucide-react';
+
 const Hero = () => {
   const handleWhatsAppClick = () => {
     // Format phone number for WhatsApp link
@@ -11,6 +13,7 @@ const Hero = () => {
     // Open WhatsApp in a new tab
     window.open(whatsappUrl, '_blank');
   };
+  
   return <div className="relative bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto px-4 py-20 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -51,8 +54,12 @@ const Hero = () => {
           </div>
           
           <div className="relative">
-            <div className="bg-white p-3 rounded-xl shadow-xl overflow-hidden">
-              <img src="/lovable-uploads/7e3926fc-037b-40b1-9918-f51c15515c59.png" alt="KimCom Security Products Showcase" className="w-full h-auto rounded-lg object-cover" />
+            <div className="bg-white p-3 rounded-xl shadow-xl overflow-hidden h-[400px]">
+              <img 
+                src="/lovable-uploads/7e3926fc-037b-40b1-9918-f51c15515c59.png" 
+                alt="KimCom Security Products Showcase" 
+                className="w-full h-full rounded-lg object-cover object-center"
+              />
             </div>
             <div className="absolute -bottom-6 -left-6 bg-kimcom-600 text-white p-4 rounded-lg shadow-lg">
               <p className="text-xl font-bold">6+</p>
@@ -67,4 +74,5 @@ const Hero = () => {
       </div>
     </div>;
 };
+
 export default Hero;

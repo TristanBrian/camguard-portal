@@ -33,6 +33,10 @@ const productFormSchema = z.object({
     message: "Stock must be a non-negative number.",
   }),
   imageUrl: z.string().optional(),
+  brand: z.string().optional(),
+  model: z.string().optional(),
+  features: z.string().optional(),
+  difficulty: z.enum(['Easy', 'Medium', 'Advanced']).optional(),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -64,6 +68,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
       sku: initialData?.sku || "",
       stock: initialData?.stock || "",
       imageUrl: initialData?.imageUrl || "",
+      brand: initialData?.brand || "",
+      model: initialData?.model || "",
+      features: initialData?.features || "",
+      difficulty: initialData?.difficulty || "Medium",
     },
     mode: "onChange",
   });
@@ -112,7 +120,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
     const submitData = {
       ...data,
       image: imageFile || undefined,
-      imageUrl: imageSource === 'url' ? imageUrl : undefined
+      imageUrl: imageSource === 'url' ? imageUrl : undefined,
+      difficulty: data.difficulty || "Medium",
     };
     
     setTimeout(() => {
@@ -122,7 +131,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
         form.reset();
         clearImage();
       }
-    }, 1000);
+    }, 500);
   };
 
   return (
@@ -133,7 +142,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col md:flex-row gap-6">
               <div className="w-full md:w-1/2 space-y-4">
                 <FormField
                   control={form.control}
@@ -148,6 +157,36 @@ const ProductForm: React.FC<ProductFormProps> = ({
                     </FormItem>
                   )}
                 />
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="brand"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Brand</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Brand name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="model"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Model</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Model number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -211,6 +250,36 @@ const ProductForm: React.FC<ProductFormProps> = ({
                 
                 <FormField
                   control={form.control}
+                  name="difficulty"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>Installation Difficulty</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex space-x-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="Easy" id="easy" />
+                            <Label htmlFor="easy">Easy</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="Medium" id="medium" />
+                            <Label htmlFor="medium">Medium</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="Advanced" id="advanced" />
+                            <Label htmlFor="advanced">Advanced</Label>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
                   name="description"
                   render={({ field }) => (
                     <FormItem>
@@ -218,6 +287,24 @@ const ProductForm: React.FC<ProductFormProps> = ({
                       <FormControl>
                         <Textarea 
                           placeholder="Product description" 
+                          className="min-h-[80px]"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="features"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Product Features (one per line)</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Enter features, one per line" 
                           className="min-h-[120px]"
                           {...field} 
                         />
@@ -336,7 +423,11 @@ const ProductForm: React.FC<ProductFormProps> = ({
                       <p className="font-medium text-sm">
                         {form.watch("name") || "Product Name"}
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-xs text-gray-600">
+                        {form.watch("brand") && <span className="mr-2">{form.watch("brand")}</span>}
+                        {form.watch("model") && <span className="italic">{form.watch("model")}</span>}
+                      </p>
+                      <p className="text-sm font-medium text-kimcom-600">
                         KSh {form.watch("price") || "0.00"}
                       </p>
                     </div>
@@ -350,7 +441,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                 <Button type="button" variant="outline" onClick={() => form.reset()}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isLoading}>
+                <Button type="submit" disabled={isLoading} className="bg-kimcom-600 hover:bg-kimcom-700">
                   {isLoading ? "Saving..." : isEditing ? "Update Product" : "Add Product"}
                 </Button>
               </div>

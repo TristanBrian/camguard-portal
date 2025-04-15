@@ -30,7 +30,9 @@ const ProductManager: React.FC = () => {
   const filteredProducts = products.filter(product => 
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
+    product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (product.model && product.model.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
   const handleAddProduct = (productData: any) => {
@@ -41,6 +43,7 @@ const ProductManager: React.FC = () => {
       stock: Number(productData.stock),
       image: productData.imageUrl || (productData.image ? URL.createObjectURL(productData.image) : '/placeholder.svg'),
       difficulty: productData.difficulty || 'Medium', // Default difficulty
+      features: productData.features ? productData.features.split('\n').filter((f: string) => f.trim()) : undefined,
     };
     
     setProducts([...products, newProduct]);
@@ -58,6 +61,7 @@ const ProductManager: React.FC = () => {
         price: Number(productData.price),
         stock: Number(productData.stock),
         image: productData.imageUrl || (productData.image ? URL.createObjectURL(productData.image) : product.image),
+        features: productData.features ? productData.features.split('\n').filter((f: string) => f.trim()) : product.features,
       } : product
     );
     
@@ -104,11 +108,11 @@ const ProductManager: React.FC = () => {
     let csvContent = "data:text/csv;charset=utf-8,";
     
     // Add headers
-    csvContent += "ID,Name,SKU,Category,Price,Stock,Difficulty,Description\n";
+    csvContent += "ID,Name,Brand,Model,SKU,Category,Price,Stock,Difficulty,Description\n";
     
     // Add rows
     products.forEach(product => {
-      csvContent += `${product.id},${product.name},${product.sku},${product.category},${product.price},${product.stock},${product.difficulty},"${product.description}"\n`;
+      csvContent += `${product.id},"${product.name}",${product.brand || ''},${product.model || ''},${product.sku},${product.category},${product.price},${product.stock},${product.difficulty},"${product.description}"\n`;
     });
     
     // Create download link
@@ -207,6 +211,7 @@ const ProductManager: React.FC = () => {
                           <ArrowUpDown className="ml-1 h-4 w-4" />
                         </div>
                       </th>
+                      <th className="p-3">Brand/Model</th>
                       <th className="p-3">SKU</th>
                       <th className="p-3">Category</th>
                       <th className="p-3">Difficulty</th>
@@ -246,6 +251,10 @@ const ProductManager: React.FC = () => {
                                 {product.description}
                               </p>
                             </div>
+                          </td>
+                          <td className="p-3">
+                            {product.brand && <p className="text-xs font-medium">{product.brand}</p>}
+                            {product.model && <p className="text-xs text-gray-500">{product.model}</p>}
                           </td>
                           <td className="p-3 text-gray-500">{product.sku}</td>
                           <td className="p-3">
@@ -288,7 +297,7 @@ const ProductManager: React.FC = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={9} className="p-10 text-center">
+                        <td colSpan={10} className="p-10 text-center">
                           <Package className="h-10 w-10 text-gray-300 mx-auto mb-2" />
                           <p className="text-gray-500">No products found</p>
                           {searchTerm && (
@@ -328,6 +337,9 @@ const ProductManager: React.FC = () => {
                 sku: editingProduct.sku,
                 stock: String(editingProduct.stock),
                 image: editingProduct.image,
+                brand: editingProduct.brand || '',
+                model: editingProduct.model || '',
+                features: editingProduct.features ? editingProduct.features.join('\n') : '',
               }}
               isEditing={true}
             />

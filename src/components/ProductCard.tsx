@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ShoppingCart, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 interface ProductCardProps {
   id: string;
@@ -14,6 +15,8 @@ interface ProductCardProps {
   category: string;
   difficulty?: 'Easy' | 'Medium' | 'Advanced';
   stock?: number;
+  brand?: string;
+  model?: string;
   onAddToCart?: () => void;
   onViewDetails?: () => void;
 }
@@ -27,6 +30,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   category,
   difficulty = 'Medium',
   stock,
+  brand,
+  model,
   onAddToCart,
   onViewDetails
 }) => {
@@ -66,12 +71,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const isOutOfStock = stock !== undefined && stock === 0;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover-animate overflow-hidden">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover-animate overflow-hidden h-full flex flex-col">
       <div className="relative">
         <img 
           src={image} 
           alt={name}
           className="w-full h-48 object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = '/placeholder.svg';
+          }}
         />
         <div className="absolute top-3 left-3">
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-kimcom-100 text-kimcom-800">
@@ -91,10 +100,27 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
         )}
       </div>
-      <div className="p-4">
+      <div className="p-4 flex-grow flex flex-col">
         <h3 className="text-lg font-semibold text-gray-900 truncate">{name}</h3>
-        <p className="text-gray-600 text-sm mt-1 h-10 overflow-hidden">{description}</p>
-        <div className="mt-3 flex justify-between items-center">
+        
+        {(brand || model) && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {brand && (
+              <Badge variant="outline" className="text-xs">
+                {brand}
+              </Badge>
+            )}
+            {model && (
+              <Badge variant="outline" className="text-xs bg-gray-50">
+                {model}
+              </Badge>
+            )}
+          </div>
+        )}
+        
+        <p className="text-gray-600 text-sm mt-2 line-clamp-2">{description}</p>
+        
+        <div className="mt-auto pt-4 flex justify-between items-center">
           <div className="text-xl font-bold text-kimcom-700">KSh {price.toLocaleString()}</div>
           <div className="flex space-x-2">
             <Button 
