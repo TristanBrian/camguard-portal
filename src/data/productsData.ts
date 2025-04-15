@@ -185,5 +185,88 @@ export const productsData: Product[] = [
     difficulty: "Advanced",
     stock: 5,
     sku: "REC-DVR-10"
+  },
+  {
+    id: "dl1",
+    name: "D-Link DES-1005C 5-Port Desktop Switch",
+    description: "The D-link DES-1005C 5-Port Desktop Switch allows you to quickly set up a fast, reliable, and efficient wired network in your home or office. This unmanaged 10/100Mbps switch is designed to enhance small workgroup performance while providing a high level of flexibility.",
+    price: 2999,
+    image: "/lovable-uploads/ac2e9f27-012d-4f9a-aa8f-3c5f7e741ee0.png",
+    category: "D-Link",
+    difficulty: "Easy",
+    stock: 30,
+    sku: "DL-SW-01",
+    features: [
+      "5 high-speed Fast Ethernet ports",
+      "Innovative D-Link Green energy saving features",
+      "Compact design for convenient placement",
+      "Fanless design for silent operation"
+    ],
+    brand: "D-Link",
+    model: "DES-1005C"
+  },
+  {
+    id: "dl2",
+    name: "D-Link DGS-F1100-10PS-E 8-Port POE Gigabit Switch",
+    description: "Professional managed PoE switch with comprehensive management features and smart roaming capabilities.",
+    price: 14999,
+    image: "/lovable-uploads/e7af41dc-f76c-4a63-ba51-f4883d3ce4aa.png",
+    category: "D-Link",
+    difficulty: "Medium",
+    stock: 15,
+    sku: "DL-SW-02",
+    features: [
+      "8 x 10/10/1000BASE-T PoE ports",
+      "2 x SFP ports",
+      "Supports IEEE 802.3at PoE",
+      "Complete web interface for management",
+      "Smart Roaming with unified network name",
+      "6 powerful internal antennas"
+    ],
+    brand: "D-Link",
+    model: "DGS-F1100-10PS-E"
+  },
+  {
+    id: "tp1",
+    name: "TP-Link TL-WA850RE WiFi Range Extender",
+    description: "Extend your WiFi coverage with this easy-to-deploy range extender featuring one-touch setup and flexible placement options.",
+    price: 3999,
+    image: "/lovable-uploads/ec9e19bb-27e4-4529-ba71-6e29c4fa3688.png",
+    category: "TP-Link",
+    difficulty: "Easy",
+    stock: 25,
+    sku: "TP-EXT-01",
+    features: [
+      "Range Extender mode boosts wireless signal",
+      "Miniature size and wall-mounted design",
+      "One-touch Range Extender button",
+      "Ethernet port for wired connectivity",
+      "Tether App for easy management",
+      "LED Control with Night Mode"
+    ],
+    brand: "TP-Link",
+    model: "TL-WA850RE"
+  },
+  {
+    id: "tp2",
+    name: "TP-Link Archer C80 AC1900 Wireless MU-MIMO Router",
+    description: "High-performance dual-band router with advanced features for seamless 4K streaming and gaming.",
+    price: 8999,
+    image: "/lovable-uploads/1990db62-334d-4b04-bcab-7c919c9578ad.png",
+    category: "TP-Link",
+    difficulty: "Medium",
+    stock: 20,
+    sku: "TP-RTR-01",
+    features: [
+      "Ultra-Fast Dual-Band Speeds up to 1.9 Gbps",
+      "Beamforming technology with 4 antennas",
+      "MU-MIMO technology for multiple devices",
+      "Smart Connect and Airtime Fairness",
+      "4 Gigabit LAN ports + 1 WAN port",
+      "Advanced Parental Controls",
+      "Easy setup with TP-Link Tether App"
+    ],
+    brand: "TP-Link",
+    model: "Archer C80"
   }
 ];
