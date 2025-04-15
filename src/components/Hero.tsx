@@ -57,8 +57,8 @@ const Hero = () => {
           <div className="relative">
             <div className="bg-white p-3 rounded-xl shadow-xl overflow-hidden">
               <img 
-                src="https://images.unsplash.com/photo-1605810230434-7631ac76ec81" 
-                alt="CCTV security system" 
+                src="/lovable-uploads/7e3926fc-037b-40b1-9918-f51c15515c59.png"
+                alt="KimCom Security Products Showcase" 
                 className="w-full h-auto rounded-lg object-cover"
               />
             </div>

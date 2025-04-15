@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -34,16 +33,13 @@ const Products = () => {
   const [cartItems, setCartItems] = useState<{id: string, quantity: number}[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   
-  // Load user and cart data on component mount
   useEffect(() => {
-    // Check if user is logged in
     const user = localStorage.getItem('kimcom_current_user');
     if (user) {
       const userData = JSON.parse(user);
       setCurrentUser(userData);
       setIsLoggedIn(true);
       
-      // Load user's cart from localStorage
       const userCartKey = `kimcom_cart_${userData.id}`;
       const savedCart = localStorage.getItem(userCartKey);
       if (savedCart) {
@@ -52,7 +48,6 @@ const Products = () => {
         setCartItems([]);
       }
     } else {
-      // Load anonymous cart
       const anonymousCart = localStorage.getItem('cartItems');
       if (anonymousCart) {
         setCartItems(JSON.parse(anonymousCart));
@@ -60,29 +55,22 @@ const Products = () => {
     }
   }, []);
   
-  // Save cart whenever it changes
   useEffect(() => {
     if (currentUser) {
-      // Save cart for logged in user
       localStorage.setItem(`kimcom_cart_${currentUser.id}`, JSON.stringify(cartItems));
       
-      // Trigger storage event for navbar to detect changes
       const event = new Event('storage');
       window.dispatchEvent(event);
     } else {
-      // Save anonymous cart
       localStorage.setItem('cartItems', JSON.stringify(cartItems));
       
-      // Trigger storage event for navbar to detect changes
       const event = new Event('storage');
       window.dispatchEvent(event);
     }
   }, [cartItems, currentUser]);
 
-  // Get unique categories for the filter
-  const categories = ['All', ...new Set(productsData.map(product => product.category))];
+  const categories = ['All', 'Dahua Tech', 'D-Link', 'TP-Link', 'Tender'];
 
-  // Filter products based on search term and category
   const filteredProducts = productsData.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           product.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -108,7 +96,6 @@ const Products = () => {
     const product = productsData.find(p => p.id === id);
     toast.success(`Added ${product?.name} to cart`);
     
-    // Open cart popover after adding item
     setIsCartOpen(true);
   };
 
@@ -117,13 +104,11 @@ const Products = () => {
     const product = productsData.find(p => p.id === id);
     
     if (existingItem && existingItem.quantity > 1) {
-      // Reduce quantity by 1
       setCartItems(cartItems.map(item => 
         item.id === id ? { ...item, quantity: item.quantity - 1 } : item
       ));
       toast.info(`Removed 1 ${product?.name} from cart`);
     } else {
-      // Remove item completely
       setCartItems(cartItems.filter(item => item.id !== id));
       toast.info(`Removed ${product?.name} from cart`);
     }
@@ -161,7 +146,6 @@ const Products = () => {
       return;
     }
     
-    // Store cart in localStorage for checkout page to access
     if (currentUser) {
       localStorage.setItem(`kimcom_cart_${currentUser.id}`, JSON.stringify(cartItems));
     } else {
@@ -172,19 +156,17 @@ const Products = () => {
 
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
-  // Map cart items to full product details for display in cart popover
   const cartProductDetails = cartItems.map(item => {
     const product = productsData.find(p => p.id === item.id);
     return {
       ...product,
       quantity: item.quantity
     };
-  }).filter(item => item); // Filter out any undefined items
+  }).filter(item => item);
 
   const cartTotal = cartProductDetails.reduce((total, item) => 
     total + (item.price * item.quantity), 0);
 
-  // Update ProductCard's onAddToCart to use our function
   const onProductAddToCart = (id: string) => {
     handleAddToCart(id);
   };
@@ -194,7 +176,6 @@ const Products = () => {
       <Navbar />
 
       <main className="flex-grow">
-        {/* Hero section */}
         <section className="bg-gradient-to-r from-kimcom-800 to-kimcom-600 py-16 text-white">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <h1 className="text-4xl font-bold mb-4">Security Products</h1>
@@ -204,10 +185,24 @@ const Products = () => {
           </div>
         </section>
 
-        {/* Products section */}
         <section className="py-16 bg-gray-50">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            {/* User action */}
+            <div className="mb-8 flex flex-wrap gap-4">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-6 py-2 rounded-full transition-all duration-200 ${
+                    selectedCategory === category
+                      ? 'bg-kimcom-600 text-white shadow-md'
+                      : 'bg-white text-gray-600 hover:bg-kimcom-50'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+
             <div className="mb-8 flex justify-between items-center">
               <div className="flex items-center">
                 <span className="mr-2">Filter by:</span>
@@ -329,7 +324,6 @@ const Products = () => {
               </div>
             </div>
 
-            {/* Search box */}
             <div className="mb-8">
               <div className="relative max-w-md mx-auto">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -343,7 +337,6 @@ const Products = () => {
               </div>
             </div>
 
-            {/* Products grid */}
             {filteredProducts.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-500 text-lg">No products found matching your search.</p>
@@ -368,7 +361,6 @@ const Products = () => {
               </div>
             )}
 
-            {/* Pagination */}
             <div className="mt-12 flex justify-center">
               <div className="flex items-center space-x-2">
                 <Button variant="outline" size="sm">
