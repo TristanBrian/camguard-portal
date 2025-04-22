@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +11,8 @@ import { toast } from 'sonner';
 import ProductForm from '@/components/admin/ProductForm';
 import { useNavigate } from 'react-router-dom';
 import { productsData, Product } from '@/data/productsData';
+import { fetchProducts, createProduct, updateProduct, deleteProduct, isAdmin, uploadProductImage } from "@/integrations/supabase/admin";
+import { supabase } from "@/integrations/supabase/client";
 
 const ProductManager: React.FC = () => {
   const navigate = useNavigate();
@@ -20,62 +21,98 @@ const ProductManager: React.FC = () => {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState('all');
-  
+  const [isAdminUser, setIsAdminUser] = useState(false);
+
   useEffect(() => {
-    // Load products from our shared data source
-    setProducts(productsData);
-  }, []);
-  
-  // Filter products based on search term
-  const filteredProducts = products.filter(product => 
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (product.model && product.model.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-  
-  const handleAddProduct = (productData: any) => {
-    const newProduct = {
-      id: `p${Date.now().toString().slice(-5)}`,
-      ...productData,
-      price: Number(productData.price),
-      stock: Number(productData.stock),
-      image: productData.imageUrl || (productData.image ? URL.createObjectURL(productData.image) : '/placeholder.svg'),
-      difficulty: productData.difficulty || 'Medium', // Default difficulty
-      features: productData.features ? productData.features.split('\n').filter((f: string) => f.trim()) : undefined,
+    const fetchRole = async () => {
+      const userInfo = supabase.auth.getUser ? (await supabase.auth.getUser()).data?.user : null;
+      if (userInfo?.id) {
+        const hasRole = await isAdmin(userInfo.id);
+        setIsAdminUser(hasRole);
+      }
     };
-    
-    setProducts([...products, newProduct]);
-    toast.success('Product added successfully');
-    setActiveTab('all');
-  };
-  
-  const handleUpdateProduct = (productData: any) => {
-    if (!editingProduct) return;
-    
-    const updatedProducts = products.map(product => 
-      product.id === editingProduct.id ? {
-        ...product,
+    fetchRole();
+  }, []);
+
+  useEffect(() => {
+    const fetchAllProducts = async () => {
+      try {
+        const products = await fetchProducts();
+        setProducts(products || []);
+      } catch (err) {
+        toast.error("Error fetching products");
+        setProducts([]);
+      }
+    };
+    fetchAllProducts();
+  }, []);
+
+  const handleAddProduct = async (productData: any) => {
+    try {
+      let imageUrl = undefined;
+      if (productData.image instanceof File) {
+        const fileName = `product-${Date.now()}-${productData.image.name}`;
+        imageUrl = await uploadProductImage(productData.image, fileName);
+      } else if (productData.imageUrl) {
+        imageUrl = productData.imageUrl;
+      }
+      const payload = {
         ...productData,
         price: Number(productData.price),
         stock: Number(productData.stock),
-        image: productData.imageUrl || (productData.image ? URL.createObjectURL(productData.image) : product.image),
-        features: productData.features ? productData.features.split('\n').filter((f: string) => f.trim()) : product.features,
-      } : product
-    );
-    
-    setProducts(updatedProducts);
-    setEditingProduct(null);
-    setActiveTab('all');
-    toast.success('Product updated successfully');
+        image: imageUrl || "/placeholder.svg",
+        difficulty: productData.difficulty || "Medium",
+        features: productData.features ? productData.features.split('\n').filter((f: string) => f.trim()) : undefined,
+      };
+      await createProduct(payload);
+      toast.success("Product added successfully");
+      setActiveTab("all");
+      const newProducts = await fetchProducts();
+      setProducts(newProducts || []);
+    } catch (e) {
+      toast.error("Failed to add product");
+    }
   };
-  
-  const handleDeleteProduct = (productId: string) => {
-    setProducts(products.filter(product => product.id !== productId));
-    toast.success('Product deleted successfully');
+
+  const handleUpdateProduct = async (productData: any) => {
+    if (!editingProduct) return;
+    try {
+      let imageUrl = editingProduct.image;
+      if (productData.image instanceof File) {
+        const fileName = `product-${editingProduct.id}-${Date.now()}-${productData.image.name}`;
+        imageUrl = await uploadProductImage(productData.image, fileName);
+      } else if (productData.imageUrl) {
+        imageUrl = productData.imageUrl;
+      }
+      const payload = {
+        ...productData,
+        price: Number(productData.price),
+        stock: Number(productData.stock),
+        image: imageUrl,
+        features: productData.features ? productData.features.split('\n').filter((f: string) => f.trim()) : editingProduct.features,
+      };
+      await updateProduct(editingProduct.id, payload);
+      setEditingProduct(null);
+      setActiveTab("all");
+      toast.success("Product updated successfully");
+      const newProducts = await fetchProducts();
+      setProducts(newProducts || []);
+    } catch (e) {
+      toast.error("Failed to update product");
+    }
   };
-  
+
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      await deleteProduct(productId);
+      toast.success("Product deleted successfully");
+      const newProducts = await fetchProducts();
+      setProducts(newProducts || []);
+    } catch (e) {
+      toast.error("Failed to delete product");
+    }
+  };
+
   const handleSelectProduct = (productId: string) => {
     if (selectedProducts.includes(productId)) {
       setSelectedProducts(selectedProducts.filter(id => id !== productId));
@@ -83,7 +120,7 @@ const ProductManager: React.FC = () => {
       setSelectedProducts([...selectedProducts, productId]);
     }
   };
-  
+
   const handleSelectAllProducts = () => {
     if (selectedProducts.length === filteredProducts.length) {
       setSelectedProducts([]);
@@ -91,31 +128,24 @@ const ProductManager: React.FC = () => {
       setSelectedProducts(filteredProducts.map(product => product.id));
     }
   };
-  
+
   const handleDeleteSelected = () => {
     setProducts(products.filter(product => !selectedProducts.includes(product.id)));
     setSelectedProducts([]);
     toast.success(`${selectedProducts.length} products deleted successfully`);
   };
-  
+
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
     setActiveTab('edit');
   };
-  
+
   const handleExportCSV = () => {
-    // Create CSV content
     let csvContent = "data:text/csv;charset=utf-8,";
-    
-    // Add headers
     csvContent += "ID,Name,Brand,Model,SKU,Category,Price,Stock,Difficulty,Description\n";
-    
-    // Add rows
     products.forEach(product => {
       csvContent += `${product.id},"${product.name}",${product.brand || ''},${product.model || ''},${product.sku},${product.category},${product.price},${product.stock},${product.difficulty},"${product.description}"\n`;
     });
-    
-    // Create download link
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -123,10 +153,9 @@ const ProductManager: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
     toast.success('Products exported successfully');
   };
-  
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'Easy':
@@ -139,7 +168,25 @@ const ProductManager: React.FC = () => {
         return 'bg-gray-100 text-gray-800';
     }
   };
-  
+
+  if (!isAdminUser) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="bg-red-100 text-red-700 px-6 py-4 rounded shadow">
+          <p>You do not have admin access to this page.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const filteredProducts = products.filter(product => 
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (product.model && product.model.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
