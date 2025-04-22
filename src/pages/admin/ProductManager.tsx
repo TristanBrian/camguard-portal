@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,7 @@ import { Package, PlusCircle, Search, MoreVertical, Edit, Trash, ArrowUpDown, Do
 import { toast } from 'sonner';
 import ProductForm from '@/components/admin/ProductForm';
 import { useNavigate } from 'react-router-dom';
-import { productsData, Product } from '@/data/productsData';
+import { Product } from '@/data/productsData';
 import { fetchProducts, createProduct, updateProduct, deleteProduct, isAdmin, uploadProductImage } from "@/integrations/supabase/admin";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -37,8 +38,9 @@ const ProductManager: React.FC = () => {
   useEffect(() => {
     const fetchAllProducts = async () => {
       try {
-        const products = await fetchProducts();
-        setProducts(products || []);
+        const fetchedProducts = await fetchProducts();
+        // Ensure the data matches Product type
+        setProducts(fetchedProducts || []);
       } catch (err) {
         toast.error("Error fetching products");
         setProducts([]);

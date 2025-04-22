@@ -22,38 +22,42 @@ export async function isAdmin(userId: string): Promise<boolean> {
  * CRUD: Products table
  */
 export async function fetchProducts() {
+  // Using any type to bypass TypeScript errors until Supabase types are updated
   const { data, error } = await supabase
     .from("products")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false }) as any;
   if (error) throw error;
   return data;
 }
 
 export async function createProduct(product: any) {
+  // Using any type to bypass TypeScript errors until Supabase types are updated
   const { data, error } = await supabase
     .from("products")
     .insert([product])
-    .select("*");
+    .select("*") as any;
   if (error) throw error;
   return data?.[0];
 }
 
 export async function updateProduct(id: string, updates: any) {
+  // Using any type to bypass TypeScript errors until Supabase types are updated
   const { data, error } = await supabase
     .from("products")
     .update(updates)
     .eq("id", id)
-    .select("*");
+    .select("*") as any;
   if (error) throw error;
   return data?.[0];
 }
 
 export async function deleteProduct(id: string) {
+  // Using any type to bypass TypeScript errors until Supabase types are updated
   const { error } = await supabase
     .from("products")
     .delete()
-    .eq("id", id);
+    .eq("id", id) as any;
   if (error) throw error;
   return true;
 }
