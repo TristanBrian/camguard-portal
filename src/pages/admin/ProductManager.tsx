@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,8 +38,7 @@ const ProductManager: React.FC = () => {
     const fetchAllProducts = async () => {
       try {
         const fetchedProducts = await fetchProducts();
-        // Ensure the data matches Product type
-        setProducts(fetchedProducts || []);
+        setProducts(fetchedProducts);
       } catch (err) {
         toast.error("Error fetching products");
         setProducts([]);
@@ -70,7 +68,7 @@ const ProductManager: React.FC = () => {
       toast.success("Product added successfully");
       setActiveTab("all");
       const newProducts = await fetchProducts();
-      setProducts(newProducts || []);
+      setProducts(newProducts);
     } catch (e) {
       toast.error("Failed to add product");
     }
@@ -98,7 +96,7 @@ const ProductManager: React.FC = () => {
       setActiveTab("all");
       toast.success("Product updated successfully");
       const newProducts = await fetchProducts();
-      setProducts(newProducts || []);
+      setProducts(newProducts);
     } catch (e) {
       toast.error("Failed to update product");
     }
@@ -109,7 +107,7 @@ const ProductManager: React.FC = () => {
       await deleteProduct(productId);
       toast.success("Product deleted successfully");
       const newProducts = await fetchProducts();
-      setProducts(newProducts || []);
+      setProducts(newProducts);
     } catch (e) {
       toast.error("Failed to delete product");
     }

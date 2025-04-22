@@ -1,13 +1,13 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { Product } from "@/data/productsData";
 
 /**
  * Check if the current user is an admin.
  */
 export async function isAdmin(userId: string): Promise<boolean> {
   const { data, error } = await supabase
-    .from<"user_roles", Tables<"user_roles">>("user_roles")
+    .from("user_roles")
     .select("role")
     .eq("user_id", userId)
     .eq("role", "admin")
@@ -22,39 +22,72 @@ export async function isAdmin(userId: string): Promise<boolean> {
 /**
  * CRUD: Products table
  */
-export async function fetchProducts(): Promise<Tables<"products">[]> {
+export async function fetchProducts(): Promise<Product[]> {
   const { data, error } = await supabase
-    .from<"products", Tables<"products">>("products")
+    .from("products")
     .select("*")
     .order("created_at", { ascending: false });
+  
   if (error) throw error;
-  return data || [];
+  
+  // Convert database results to Product objects
+  return data?.map(item => ({
+    ...item,
+    difficulty: (item.difficulty || 'Medium') as 'Easy' | 'Medium' | 'Advanced',
+    // Ensure other fields match the Product interface
+    price: Number(item.price),
+    stock: Number(item.stock),
+    features: item.features || []
+  })) || [];
 }
 
-export async function createProduct(product: TablesInsert<"products">) {
+export async function createProduct(product: Omit<Product, 'id'>) {
   const { data, error } = await supabase
-    .from<"products", Tables<"products">>("products")
+    .from("products")
     .insert([product])
     .select("*");
+  
   if (error) throw error;
-  return data?.[0];
+  
+  if (data?.[0]) {
+    return {
+      ...data[0],
+      difficulty: (data[0].difficulty || 'Medium') as 'Easy' | 'Medium' | 'Advanced',
+      price: Number(data[0].price),
+      stock: Number(data[0].stock),
+      features: data[0].features || []
+    } as Product;
+  }
+  return null;
 }
 
-export async function updateProduct(id: string, updates: TablesUpdate<"products">) {
+export async function updateProduct(id: string, updates: Partial<Omit<Product, 'id'>>) {
   const { data, error } = await supabase
-    .from<"products", Tables<"products">>("products")
+    .from("products")
     .update(updates)
     .eq("id", id)
     .select("*");
+  
   if (error) throw error;
-  return data?.[0];
+  
+  if (data?.[0]) {
+    return {
+      ...data[0],
+      difficulty: (data[0].difficulty || 'Medium') as 'Easy' | 'Medium' | 'Advanced',
+      price: Number(data[0].price),
+      stock: Number(data[0].stock),
+      features: data[0].features || []
+    } as Product;
+  }
+  return null;
 }
 
 export async function deleteProduct(id: string) {
   const { error } = await supabase
-    .from<"products", Tables<"products">>("products")
+    .from("products")
     .delete()
     .eq("id", id);
+  
   if (error) throw error;
   return true;
 }
@@ -74,4 +107,3 @@ export async function uploadProductImage(file: File, fileName: string) {
   const publicUrl = supabase.storage.from("gallery").getPublicUrl(fileName);
   return publicUrl.data.publicUrl;
 }
-
