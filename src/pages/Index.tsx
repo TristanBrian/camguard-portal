@@ -11,6 +11,7 @@ import { Camera, Settings, Wifi, ShieldCheck, Server, Network, ArrowRight, Packa
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { productsData } from '@/data/productsData';
+
 const Index = () => {
   const navigate = useNavigate();
 
@@ -57,9 +58,11 @@ const Index = () => {
     role: "Remote Professional",
     rating: 4
   }];
+
   const handleViewDetails = (id: string) => {
     navigate(`/product-details/${id}`);
   };
+
   const handleAddToCart = (id: string) => {
     // Get cart from localStorage or initialize empty array
     const existingCart = localStorage.getItem('cartItems');
@@ -90,7 +93,9 @@ const Index = () => {
     const product = productsData.find(p => p.id === id);
     toast.success(`Added ${product?.name} to cart`);
   };
-  return <div className="min-h-screen flex flex-col">
+
+  return (
+    <div className="min-h-screen flex flex-col">
       <Navbar />
 
       <main className="flex-grow">
@@ -228,9 +233,28 @@ const Index = () => {
 
         {/* CTA Section */}
         <CTASection title="Ready to secure your space?" description="Contact us today for a free consultation and quote on your security system needs." primaryButtonText="Request a Quote" secondaryButtonText="Call Us Now" bgColor="bg-kimcom-800" />
+
+        {/* GALLERY SUBHEADING SECTION */}
+        <section id="gallery" className="py-16 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl font-bold mb-4 text-kimcom-700">Gallery</h2>
+            <p className="text-gray-600 mb-6">See our onsite project photos and recent work updates. <span className="font-medium text-kimcom-600">Admins can add & manage photos here.</span></p>
+            {/* Placeholder: later can map uploaded gallery images here */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="aspect-w-4 aspect-h-3 bg-gray-200 rounded-lg animate-pulse" />
+              <div className="aspect-w-4 aspect-h-3 bg-gray-200 rounded-lg animate-pulse" />
+              <div className="aspect-w-4 aspect-h-3 bg-gray-200 rounded-lg animate-pulse" />
+            </div>
+            <div className="mt-4 text-center text-sm text-gray-400">
+              <span>Want to see more? <b>Admin</b> can upload onsite images on the gallery via the admin dashboard.</span>
+            </div>
+          </div>
+        </section>
       </main>
 
       <Footer />
-    </div>;
+    </div>
+  );
 };
+
 export default Index;
