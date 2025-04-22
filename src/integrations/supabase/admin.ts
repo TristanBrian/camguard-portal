@@ -1,12 +1,13 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 /**
  * Check if the current user is an admin.
  */
 export async function isAdmin(userId: string): Promise<boolean> {
   const { data, error } = await supabase
-    .from("user_roles")
+    .from<"user_roles", Tables<"user_roles">>("user_roles")
     .select("role")
     .eq("user_id", userId)
     .eq("role", "admin")
@@ -21,43 +22,39 @@ export async function isAdmin(userId: string): Promise<boolean> {
 /**
  * CRUD: Products table
  */
-export async function fetchProducts() {
-  // Using any type to bypass TypeScript errors until Supabase types are updated
+export async function fetchProducts(): Promise<Tables<"products">[]> {
   const { data, error } = await supabase
-    .from("products")
+    .from<"products", Tables<"products">>("products")
     .select("*")
-    .order("created_at", { ascending: false }) as any;
+    .order("created_at", { ascending: false });
   if (error) throw error;
-  return data;
+  return data || [];
 }
 
-export async function createProduct(product: any) {
-  // Using any type to bypass TypeScript errors until Supabase types are updated
+export async function createProduct(product: TablesInsert<"products">) {
   const { data, error } = await supabase
-    .from("products")
+    .from<"products", Tables<"products">>("products")
     .insert([product])
-    .select("*") as any;
+    .select("*");
   if (error) throw error;
   return data?.[0];
 }
 
-export async function updateProduct(id: string, updates: any) {
-  // Using any type to bypass TypeScript errors until Supabase types are updated
+export async function updateProduct(id: string, updates: TablesUpdate<"products">) {
   const { data, error } = await supabase
-    .from("products")
+    .from<"products", Tables<"products">>("products")
     .update(updates)
     .eq("id", id)
-    .select("*") as any;
+    .select("*");
   if (error) throw error;
   return data?.[0];
 }
 
 export async function deleteProduct(id: string) {
-  // Using any type to bypass TypeScript errors until Supabase types are updated
   const { error } = await supabase
-    .from("products")
+    .from<"products", Tables<"products">>("products")
     .delete()
-    .eq("id", id) as any;
+    .eq("id", id);
   if (error) throw error;
   return true;
 }
@@ -77,3 +74,4 @@ export async function uploadProductImage(file: File, fileName: string) {
   const publicUrl = supabase.storage.from("gallery").getPublicUrl(fileName);
   return publicUrl.data.publicUrl;
 }
+
