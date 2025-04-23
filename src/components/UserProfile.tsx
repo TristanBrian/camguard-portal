@@ -284,16 +284,24 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
         <div className="mt-6 pt-6 border-t border-gray-200">
           <h3 className="font-medium text-gray-900 mb-3">Account Options</h3>
           <div className="space-y-2">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => { window.location.href = '/settings'; }}
+            >
+              <span className="mr-2">⚙️</span>
+              Settings
+            </Button>
             <Button variant="outline" className="w-full justify-start" onClick={() => toast.info('Feature coming soon!')}>
-              <ShoppingBag className="h-4 w-4 mr-2" />
+              <span className="mr-2">🛍️</span>
               View All Orders
             </Button>
             <Button variant="outline" className="w-full justify-start" onClick={() => toast.info('Feature coming soon!')}>
-              <MapPin className="h-4 w-4 mr-2" />
+              <span className="mr-2">📦</span>
               Update Address
             </Button>
             <Button variant="outline" className="w-full justify-start" onClick={() => toast.info('Feature coming soon!')}>
-              <User className="h-4 w-4 mr-2" />
+              <span className="mr-2">👤</span>
               Edit Profile
             </Button>
           </div>
