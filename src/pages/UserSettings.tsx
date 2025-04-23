@@ -20,42 +20,95 @@ const UserSettings: React.FC = () => {
     phone: '',
     address: '',
   });
+  const [orders, setOrders] = useState<any[]>([]);
 
   useEffect(() => {
-    const currentUser = localStorage.getItem('kimcom_current_user');
-    if (currentUser) {
-      try {
-        const userData = JSON.parse(currentUser);
-        setUser(userData);
-        setFormData(prev => ({
-          ...prev,
-          email: userData.email || '',
-          fullName: userData.full_name || '',
-          phone: userData.phone || '',
-          address: userData.address || '',
-        }));
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-      }
-    } else {
-      // Check if user is logged in with Supabase
-      const checkUser = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          setUser(session.user);
+    const fetchUserData = async () => {
+      // Check for localStorage user first (demo login)
+      const currentUser = localStorage.getItem('kimcom_current_user');
+      if (currentUser) {
+        try {
+          const userData = JSON.parse(currentUser);
+          setUser(userData);
           setFormData(prev => ({
             ...prev,
-            email: session.user.email || '',
+            email: userData.email || '',
+            fullName: userData.full_name || '',
+            phone: userData.phone || '',
+            address: userData.address || '',
           }));
-
-          // Could fetch additional profile data from a profiles table here
+          return;
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
+      }
+      
+      // Then check Supabase auth
+      try {
+        const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+        
+        if (supabaseUser) {
+          setUser(supabaseUser);
+          
+          // Set known fields from auth user
+          setFormData(prev => ({
+            ...prev,
+            email: supabaseUser.email || '',
+          }));
+          
+          // Fetch additional profile data from potential profiles table
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', supabaseUser.id)
+              .single();
+              
+            if (profile) {
+              setFormData(prev => ({
+                ...prev,
+                fullName: profile.full_name || '',
+                phone: profile.phone || '',
+                address: profile.address || '',
+              }));
+            }
+          } catch (err) {
+            console.log('No profile found, using basic user data');
+          }
         } else {
           navigate('/login');
         }
-      };
-      checkUser();
-    }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        navigate('/login');
+      }
+    };
+    
+    fetchUserData();
   }, [navigate]);
+
+  // Fetch order history if we had an orders table
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (user?.id) {
+        try {
+          // This would fetch from an orders table if it existed
+          // const { data } = await supabase
+          //   .from('orders')
+          //   .select('*')
+          //   .eq('user_id', user.id)
+          //   .order('created_at', { ascending: false });
+          
+          // For now, return mock data
+          setOrders([]);
+        } catch (error) {
+          console.error('Error fetching orders:', error);
+        }
+      }
+    };
+    
+    fetchOrders();
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -70,18 +123,35 @@ const UserSettings: React.FC = () => {
     setLoading(true);
 
     try {
-      // For now we'll just update the localStorage data
-      // In a real implementation, this would update data in Supabase
       if (user) {
-        const updatedUser = {
-          ...user,
-          full_name: formData.fullName,
-          phone: formData.phone,
-          address: formData.address,
-        };
+        // If using localStorage (demo)
+        if (localStorage.getItem('kimcom_current_user')) {
+          const updatedUser = {
+            ...user,
+            full_name: formData.fullName,
+            phone: formData.phone,
+            address: formData.address,
+          };
+          
+          localStorage.setItem('kimcom_current_user', JSON.stringify(updatedUser));
+          setUser(updatedUser);
+        } 
+        // If using Supabase auth
+        else if (user.id) {
+          // This would update a profiles table if it existed
+          // const { error } = await supabase
+          //   .from('profiles')
+          //   .upsert({
+          //     id: user.id,
+          //     full_name: formData.fullName,
+          //     phone: formData.phone,
+          //     address: formData.address,
+          //     updated_at: new Date(),
+          //   });
+          
+          // if (error) throw error;
+        }
         
-        localStorage.setItem('kimcom_current_user', JSON.stringify(updatedUser));
-        setUser(updatedUser);
         toast.success('Profile updated successfully');
       }
     } catch (error) {
@@ -189,12 +259,29 @@ const UserSettings: React.FC = () => {
                   <CardTitle>Order History</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center p-6 border border-dashed rounded-md">
-                    <p className="text-muted-foreground mb-2">No orders yet</p>
-                    <Button variant="outline" onClick={() => navigate('/products')}>
-                      Browse Products
-                    </Button>
-                  </div>
+                  {orders.length > 0 ? (
+                    <div className="space-y-4">
+                      {orders.map((order) => (
+                        <div key={order.id} className="border rounded-md p-4">
+                          <div className="flex justify-between mb-2">
+                            <div>
+                              <p className="font-medium">Order #{order.id.substring(0, 8)}</p>
+                              <p className="text-sm text-gray-500">{new Date(order.created_at).toLocaleDateString()}</p>
+                            </div>
+                            <Badge>{order.status}</Badge>
+                          </div>
+                          <p className="font-medium">KSh {order.total.toLocaleString()}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center p-6 border border-dashed rounded-md">
+                      <p className="text-muted-foreground mb-2">No orders yet</p>
+                      <Button variant="outline" onClick={() => navigate('/products')}>
+                        Browse Products
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
               
@@ -203,7 +290,18 @@ const UserSettings: React.FC = () => {
                   <CardTitle>Password & Security</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Button variant="outline" className="w-full sm:w-auto">
+                  <Button 
+                    variant="outline" 
+                    className="w-full sm:w-auto" 
+                    onClick={() => {
+                      if (user.email.includes('@kimcom.com')) {
+                        toast.info("Password change not available for demo accounts");
+                      } else {
+                        // Implement password reset for real users
+                        toast.info("Password reset link will be sent to your email");
+                      }
+                    }}
+                  >
                     Change Password
                   </Button>
                   

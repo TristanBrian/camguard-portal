@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -13,17 +14,20 @@ import {
   LogIn,
   ShoppingCart,
   Trash2,
-  MinusCircle
+  MinusCircle,
+  RefreshCw
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { productsData, Product } from '@/data/productsData';
+import { Product } from '@/data/productsData';
 import { 
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { supabase } from '@/integrations/supabase/client';
+import { fetchProducts } from '@/integrations/supabase/admin';
 
 const Products = () => {
   const navigate = useNavigate();
@@ -35,29 +39,94 @@ const Products = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductDetailOpen, setIsProductDetailOpen] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   
+  // Fetch products from database
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setLoading(true);
+        const dbProducts = await fetchProducts();
+        setProducts(dbProducts);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        toast.error("Failed to load products");
+        setLoading(false);
+      }
+    };
+    
+    loadProducts();
+    
+    // Set up real-time subscription for product changes
+    const channel = supabase
+      .channel('products-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'products'
+        },
+        (payload) => {
+          console.log('Product changed:', payload);
+          loadProducts(); // Reload products when anything changes
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+  
+  // Check user login status and load cart items
   useEffect(() => {
     const user = localStorage.getItem('kimcom_current_user');
     if (user) {
-      const userData = JSON.parse(user);
-      setCurrentUser(userData);
-      setIsLoggedIn(true);
-      
-      const userCartKey = `kimcom_cart_${userData.id}`;
-      const savedCart = localStorage.getItem(userCartKey);
-      if (savedCart) {
-        setCartItems(JSON.parse(savedCart));
-      } else {
-        setCartItems([]);
+      try {
+        const userData = JSON.parse(user);
+        setCurrentUser(userData);
+        setIsLoggedIn(true);
+        
+        const userCartKey = `kimcom_cart_${userData.id}`;
+        const savedCart = localStorage.getItem(userCartKey);
+        if (savedCart) {
+          setCartItems(JSON.parse(savedCart));
+        } else {
+          setCartItems([]);
+        }
+      } catch (e) {
+        console.error("Error parsing user data:", e);
       }
     } else {
-      const anonymousCart = localStorage.getItem('cartItems');
-      if (anonymousCart) {
-        setCartItems(JSON.parse(anonymousCart));
-      }
+      const checkUser = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setCurrentUser(user);
+          setIsLoggedIn(true);
+          
+          const userCartKey = `kimcom_cart_${user.id}`;
+          const savedCart = localStorage.getItem(userCartKey);
+          if (savedCart) {
+            setCartItems(JSON.parse(savedCart));
+          } else {
+            setCartItems([]);
+          }
+        } else {
+          const anonymousCart = localStorage.getItem('cartItems');
+          if (anonymousCart) {
+            setCartItems(JSON.parse(anonymousCart));
+          }
+        }
+      };
+      
+      checkUser();
     }
   }, []);
   
+  // Save cart items to localStorage whenever they change
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem(`kimcom_cart_${currentUser.id}`, JSON.stringify(cartItems));
@@ -72,17 +141,19 @@ const Products = () => {
     }
   }, [cartItems, currentUser]);
 
-  const categories = ['All', 'Dahua Tech', 'D-Link', 'TP-Link', 'Recorder', 'Networking'];
+  // Extract unique categories from products for the filter
+  const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
 
-  const filteredProducts = productsData.filter(product => {
+  // Filter products based on search term and category
+  const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          product.description.toLowerCase().includes(searchTerm.toLowerCase());
+                          (product.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   const handleViewDetails = (id: string) => {
-    const product = productsData.find(p => p.id === id);
+    const product = products.find(p => p.id === id);
     if (product) {
       setSelectedProduct(product);
       setIsProductDetailOpen(true);
@@ -102,7 +173,7 @@ const Products = () => {
       setCartItems([...cartItems, { id, quantity: 1 }]);
     }
     
-    const product = productsData.find(p => p.id === id);
+    const product = products.find(p => p.id === id);
     toast.success(`Added ${product?.name} to cart`);
     
     setIsCartOpen(true);
@@ -110,7 +181,7 @@ const Products = () => {
 
   const handleRemoveFromCart = (id: string) => {
     const existingItem = cartItems.find(item => item.id === id);
-    const product = productsData.find(p => p.id === id);
+    const product = products.find(p => p.id === id);
     
     if (existingItem && existingItem.quantity > 1) {
       setCartItems(cartItems.map(item => 
@@ -124,7 +195,7 @@ const Products = () => {
   };
 
   const handleDeleteFromCart = (id: string) => {
-    const product = productsData.find(p => p.id === id);
+    const product = products.find(p => p.id === id);
     setCartItems(cartItems.filter(item => item.id !== id));
     toast.info(`Removed ${product?.name} from cart`);
   };
@@ -166,7 +237,7 @@ const Products = () => {
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   const cartProductDetails = cartItems.map(item => {
-    const product = productsData.find(p => p.id === item.id);
+    const product = products.find(p => p.id === item.id);
     return {
       ...product,
       quantity: item.quantity
@@ -182,6 +253,20 @@ const Products = () => {
 
   const onProductCardClick = (id: string) => {
     handleViewDetails(id);
+  };
+
+  const handleRefreshProducts = async () => {
+    try {
+      setLoading(true);
+      const dbProducts = await fetchProducts();
+      setProducts(dbProducts);
+      setLoading(false);
+      toast.success("Products refreshed");
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      toast.error("Failed to refresh products");
+      setLoading(false);
+    }
   };
 
   return (
@@ -238,6 +323,16 @@ const Products = () => {
                 </div>
               </div>
               <div className="flex space-x-4">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleRefreshProducts}
+                  disabled={loading}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+                
                 <Popover open={isCartOpen} onOpenChange={setIsCartOpen}>
                   <PopoverTrigger asChild>
                     <Button 
@@ -265,13 +360,17 @@ const Products = () => {
                     ) : (
                       <>
                         <div className="max-h-60 overflow-y-auto space-y-2">
-                          {cartProductDetails.map(item => (
+                          {cartProductDetails.map(item => item && (
                             <div key={item.id} className="flex items-center justify-between py-2 border-b">
                               <div className="flex items-center">
                                 <img 
                                   src={item.image} 
                                   alt={item.name} 
                                   className="w-10 h-10 object-cover rounded mr-2" 
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = '/placeholder.svg';
+                                  }}
                                 />
                                 <div>
                                   <p className="font-medium text-sm">{item.name}</p>
@@ -350,9 +449,23 @@ const Products = () => {
               </div>
             </div>
 
-            {filteredProducts.length === 0 ? (
+            {loading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin h-10 w-10 border-4 border-kimcom-600 border-t-transparent rounded-full"></div>
+              </div>
+            ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-500 text-lg">No products found matching your search.</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedCategory('All');
+                  }}
+                >
+                  Clear filters
+                </Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
@@ -361,14 +474,14 @@ const Products = () => {
                     key={product.id}
                     id={product.id}
                     name={product.name}
-                    description={product.description}
+                    description={product.description || ''}
                     price={product.price}
-                    image={product.image}
+                    image={product.image || '/placeholder.svg'}
                     category={product.category}
                     difficulty={product.difficulty}
                     stock={product.stock}
-                    brand={product.brand}
-                    model={product.model}
+                    brand={product.brand || ''}
+                    model={product.model || ''}
                     onViewDetails={() => onProductCardClick(product.id)}
                     onAddToCart={() => onProductAddToCart(product)}
                   />
@@ -376,23 +489,22 @@ const Products = () => {
               </div>
             )}
 
-            <div className="mt-12 flex justify-center">
-              <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Previous
-                </Button>
-                <Button variant="outline" size="sm" className="bg-kimcom-50 text-kimcom-700">1</Button>
-                <Button variant="outline" size="sm">2</Button>
-                <Button variant="outline" size="sm">3</Button>
-                <span className="mx-1">...</span>
-                <Button variant="outline" size="sm">8</Button>
-                <Button variant="outline" size="sm">
-                  Next
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
+            {filteredProducts.length > 0 && (
+              <div className="mt-12 flex justify-center">
+                <div className="flex items-center space-x-2">
+                  <Button variant="outline" size="sm" disabled>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Previous
+                  </Button>
+                  <Button variant="outline" size="sm" className="bg-kimcom-50 text-kimcom-700">1</Button>
+                  <Button variant="outline" size="sm" disabled>2</Button>
+                  <Button variant="outline" size="sm" disabled>
+                    Next
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </section>
       </main>
@@ -405,95 +517,6 @@ const Products = () => {
         onClose={() => setIsProductDetailOpen(false)}
         onAddToCart={onProductAddToCart}
       />
-      
-      <Popover open={isCartOpen} onOpenChange={setIsCartOpen}>
-        <PopoverTrigger asChild>
-          <Button 
-            variant="outline"
-            className="relative"
-          >
-            <ShoppingCart className="h-5 w-5 mr-2" />
-            Cart
-            {cartItemCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                {cartItemCount}
-              </span>
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="end" className="w-80 p-4">
-          <h3 className="font-semibold text-lg mb-2">Your Cart</h3>
-          {cartItems.length === 0 ? (
-            <div className="text-center py-6">
-              <p className="text-gray-500">Your cart is empty</p>
-              <Button variant="outline" className="mt-2" onClick={() => setIsCartOpen(false)}>
-                Browse Products
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="max-h-60 overflow-y-auto space-y-2">
-                {cartProductDetails.map(item => (
-                  <div key={item.id} className="flex items-center justify-between py-2 border-b">
-                    <div className="flex items-center">
-                      <img 
-                        src={item.image} 
-                        alt={item.name} 
-                        className="w-10 h-10 object-cover rounded mr-2" 
-                      />
-                      <div>
-                        <p className="font-medium text-sm">{item.name}</p>
-                        <p className="text-xs text-gray-500">KSh {item.price.toLocaleString()} × {item.quantity}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6 rounded-full" 
-                        onClick={() => handleRemoveFromCart(item.id)}
-                      >
-                        <MinusCircle className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6 rounded-full text-red-500 hover:text-red-700 hover:bg-red-50" 
-                        onClick={() => handleDeleteFromCart(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 space-y-3">
-                <div className="flex justify-between font-semibold">
-                  <span>Total:</span>
-                  <span>KSh {cartTotal.toLocaleString()}</span>
-                </div>
-                <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1 text-red-500 hover:text-red-700 hover:bg-red-50"
-                    onClick={handleEmptyCart}
-                  >
-                    Empty Cart
-                  </Button>
-                  <Button 
-                    className="flex-1 bg-kimcom-600 hover:bg-kimcom-700"
-                    size="sm"
-                    onClick={handleCheckout}
-                  >
-                    Checkout
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </PopoverContent>
-      </Popover>
     </div>
   );
 };

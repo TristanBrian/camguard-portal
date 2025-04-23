@@ -6,12 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Package, PlusCircle, Search, MoreVertical, Edit, Trash, ArrowUpDown, Download, UploadCloud } from 'lucide-react';
+import { Package, PlusCircle, Search, MoreVertical, Edit, Trash, ArrowUpDown, Download, UploadCloud, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import ProductForm from '@/components/admin/ProductForm';
 import { useNavigate } from 'react-router-dom';
 import { Product } from '@/data/productsData';
-import { fetchProducts, createProduct, updateProduct, deleteProduct, isAdmin, uploadProductImage } from "@/integrations/supabase/admin";
+import { fetchProducts, createProduct, updateProduct, deleteProduct, isAdmin, uploadProductImage, setupStorageBucket } from "@/integrations/supabase/admin";
 import { supabase } from "@/integrations/supabase/client";
 
 const ProductManager: React.FC = () => {
@@ -23,6 +23,7 @@ const ProductManager: React.FC = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -44,32 +45,66 @@ const ProductManager: React.FC = () => {
       }
 
       // Then check for Supabase auth
-      const userInfo = supabase.auth.getUser ? (await supabase.auth.getUser()).data?.user : null;
-      if (userInfo?.id) {
-        const hasRole = await isAdmin(userInfo.id);
-        setIsAdminUser(hasRole);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) {
+          const hasRole = await isAdmin(user.id);
+          setIsAdminUser(hasRole);
+          console.log("Admin status:", hasRole);
+        }
+      } catch (err) {
+        console.error("Error checking admin status:", err);
       }
       
       setLoading(false);
     };
     
     checkAdminStatus();
+    
+    // Setup storage bucket if needed
+    setupStorageBucket();
   }, []);
 
-  useEffect(() => {
-    const fetchAllProducts = async () => {
-      if (!isAdminUser && loading) return; // Don't fetch if we're not admin or still checking
-
-      try {
-        const fetchedProducts = await fetchProducts();
-        setProducts(fetchedProducts);
-      } catch (err) {
-        toast.error("Error fetching products");
-        setProducts([]);
-      }
-    };
+  const fetchAllProducts = async () => {
+    if (!isAdminUser && loading) return; // Don't fetch if we're not admin or still checking
     
+    try {
+      setRefreshing(true);
+      const fetchedProducts = await fetchProducts();
+      setProducts(fetchedProducts);
+      setRefreshing(false);
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      toast.error("Error fetching products");
+      setProducts([]);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     fetchAllProducts();
+    
+    // Set up realtime subscription for product changes
+    const channel = supabase
+      .channel('table-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'products'
+        },
+        (payload) => {
+          console.log('Product changed:', payload);
+          fetchAllProducts();
+        }
+      )
+      .subscribe();
+    
+    // Cleanup subscription
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [isAdminUser, loading]);
 
   const handleAddProduct = async (productData: any) => {
@@ -92,9 +127,9 @@ const ProductManager: React.FC = () => {
       await createProduct(payload);
       toast.success("Product added successfully");
       setActiveTab("all");
-      const newProducts = await fetchProducts();
-      setProducts(newProducts);
+      fetchAllProducts();
     } catch (e) {
+      console.error("Error adding product:", e);
       toast.error("Failed to add product");
     }
   };
@@ -120,9 +155,9 @@ const ProductManager: React.FC = () => {
       setEditingProduct(null);
       setActiveTab("all");
       toast.success("Product updated successfully");
-      const newProducts = await fetchProducts();
-      setProducts(newProducts);
+      fetchAllProducts();
     } catch (e) {
+      console.error("Error updating product:", e);
       toast.error("Failed to update product");
     }
   };
@@ -131,11 +166,16 @@ const ProductManager: React.FC = () => {
     try {
       await deleteProduct(productId);
       toast.success("Product deleted successfully");
-      const newProducts = await fetchProducts();
-      setProducts(newProducts);
+      fetchAllProducts();
     } catch (e) {
+      console.error("Error deleting product:", e);
       toast.error("Failed to delete product");
     }
+  };
+
+  const handleRefresh = () => {
+    fetchAllProducts();
+    toast.info("Refreshing products...");
   };
 
   const handleSelectProduct = (productId: string) => {
@@ -209,7 +249,15 @@ const ProductManager: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="bg-red-100 text-red-700 px-6 py-4 rounded shadow">
+          <p className="text-lg font-medium mb-2">Access Denied</p>
           <p>You do not have admin access to this page.</p>
+          <Button 
+            onClick={() => navigate('/admin-login')} 
+            variant="outline" 
+            className="mt-4"
+          >
+            Go to Admin Login
+          </Button>
         </div>
       </div>
     );
@@ -227,6 +275,14 @@ const ProductManager: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Product Management</h1>
+        <Button 
+          variant="outline" 
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -243,7 +299,9 @@ const ProductManager: React.FC = () => {
                 variant="destructive"
                 size="sm"
                 className="w-full md:w-auto"
-                onClick={handleDeleteSelected}
+                onClick={() => {
+                  toast.error("Batch delete not yet implemented");
+                }}
               >
                 <Trash className="h-4 w-4 mr-2" />
                 Delete Selected
@@ -261,7 +319,9 @@ const ProductManager: React.FC = () => {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={handleExportCSV}
+              onClick={() => {
+                handleExportCSV();
+              }}
               className="w-full md:w-auto"
             >
               <Download className="h-4 w-4 mr-2" />
@@ -423,6 +483,7 @@ const ProductManager: React.FC = () => {
                 brand: editingProduct.brand || '',
                 model: editingProduct.model || '',
                 features: editingProduct.features ? editingProduct.features.join('\n') : '',
+                difficulty: editingProduct.difficulty || 'Medium',
               }}
               isEditing={true}
             />
