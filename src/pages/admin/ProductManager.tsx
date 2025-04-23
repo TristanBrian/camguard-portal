@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import ProductForm from '@/components/admin/ProductForm';
 import { useNavigate } from 'react-router-dom';
 import { Product } from '@/data/productsData';
-import { fetchProducts, createProduct, updateProduct, deleteProduct, isAdmin, uploadProductImage, setupStorageBucket } from "@/integrations/supabase/admin";
+import { fetchProducts, createProduct, updateProduct, deleteProduct, isAdmin, uploadProductImage, uploadGalleryImages, setupStorageBucket } from "@/integrations/supabase/admin";
 import { supabase } from "@/integrations/supabase/client";
 
 const ProductManager: React.FC = () => {
@@ -24,6 +24,10 @@ const ProductManager: React.FC = () => {
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [galleryImages, setGalleryImages] = useState<File[]>([]);
+  const [galleryUploadLoading, setGalleryUploadLoading] = useState(false);
+  const [currentGalleryProductId, setCurrentGalleryProductId] = useState<string|null>(null);
+  const [galleryPreviewUrls, setGalleryPreviewUrls] = useState<string[]>([]);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -234,6 +238,36 @@ const ProductManager: React.FC = () => {
     }
   };
 
+  const handleGalleryFileChange = (e: React.ChangeEvent<HTMLInputElement>, productId: string) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      setGalleryImages(filesArray);
+      setGalleryPreviewUrls(filesArray.map(f => URL.createObjectURL(f)));
+      setCurrentGalleryProductId(productId);
+    }
+  };
+
+  const handleGalleryUpload = async (product: Product) => {
+    if (!galleryImages.length) return;
+    setGalleryUploadLoading(true);
+    try {
+      const urls = await uploadGalleryImages(galleryImages, product.id);
+      let newFeatures = Array.isArray(product.features) ? [...product.features] : [];
+      newFeatures = newFeatures.concat(urls);
+      await updateProduct(product.id, {
+        features: newFeatures
+      });
+      toast.success("Gallery images uploaded!");
+      setGalleryImages([]);
+      setGalleryPreviewUrls([]);
+      setCurrentGalleryProductId(null);
+    } catch (e) {
+      console.error("Error uploading gallery images:", e);
+      toast.error("Failed to upload images");
+    }
+    setGalleryUploadLoading(false);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -386,6 +420,70 @@ const ProductManager: React.FC = () => {
                                 }}
                               />
                             </div>
+                            <div className="mt-2 text-center">
+                              <label>
+                                <Button
+                                  asChild
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full"
+                                  disabled={galleryUploadLoading && currentGalleryProductId === product.id}
+                                >
+                                  <span>
+                                    +
+                                    Gallery
+                                  </span>
+                                </Button>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  className="hidden"
+                                  onChange={e => handleGalleryFileChange(e, product.id)}
+                                  disabled={galleryUploadLoading && currentGalleryProductId === product.id}
+                                />
+                              </label>
+                              {currentGalleryProductId === product.id && galleryImages.length > 0 && (
+                                <div className="mt-1 flex flex-col items-center">
+                                  <div className="flex flex-wrap gap-1">
+                                    {galleryPreviewUrls.map((url, idx) => (
+                                      <img
+                                        key={idx}
+                                        src={url}
+                                        alt="gallery preview"
+                                        className="h-8 w-8 object-cover border rounded shadow"
+                                      />
+                                    ))}
+                                  </div>
+                                  <Button
+                                    size="xs"
+                                    className="mt-1 bg-kimcom-600 text-white"
+                                    onClick={() => handleGalleryUpload(product)}
+                                    disabled={galleryUploadLoading}
+                                  >
+                                    {galleryUploadLoading ? "Uploading..." : "Upload"}
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                            {Array.isArray(product.features) && product.features.length > 0 && (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {product.features
+                                  .filter(f => typeof f === 'string' && (f.startsWith('https://') || f.startsWith('http://')))
+                                  .map((img, idx) => (
+                                  <img
+                                    key={idx}
+                                    src={img}
+                                    alt="gallery"
+                                    className="h-8 w-8 object-cover border rounded-full"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.src = '/placeholder.svg';
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            )}
                           </td>
                           <td className="p-3">
                             <div>
@@ -482,7 +580,7 @@ const ProductManager: React.FC = () => {
                 image: editingProduct.image,
                 brand: editingProduct.brand || '',
                 model: editingProduct.model || '',
-                features: editingProduct.features ? editingProduct.features.join('\n') : '',
+                features: editingProduct.features ? editingProduct.features.split('\n').filter((f: string) => f.trim()) : '',
                 difficulty: editingProduct.difficulty || 'Medium',
               }}
               isEditing={true}
