@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -35,7 +36,12 @@ const AdminLogin: React.FC = () => {
     // First check for hardcoded admin email/password
     if (email.trim().toLowerCase() === "admin@kimcom.com" && password === "admin123") {
       toast.success('Admin login successful');
-      // Optionally, you can set some admin session/key in localStorage here.
+      // Store admin info in localStorage for persistence
+      localStorage.setItem('kimcom_current_user', JSON.stringify({
+        id: 'admin-hardcoded',
+        email: 'admin@kimcom.com',
+        role: 'admin'
+      }));
       navigate('/admin');
       setLoading(false);
       return;

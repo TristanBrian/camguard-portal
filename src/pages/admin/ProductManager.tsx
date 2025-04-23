@@ -22,20 +22,44 @@ const ProductManager: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState('all');
   const [isAdminUser, setIsAdminUser] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchRole = async () => {
+    const checkAdminStatus = async () => {
+      setLoading(true);
+      
+      // First check for hardcoded admin in localStorage (from AdminLogin)
+      const currentUser = localStorage.getItem('kimcom_current_user');
+      if (currentUser) {
+        try {
+          const parsedUser = JSON.parse(currentUser);
+          if (parsedUser.email === 'admin@kimcom.com') {
+            setIsAdminUser(true);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          // Handle parsing error silently
+        }
+      }
+
+      // Then check for Supabase auth
       const userInfo = supabase.auth.getUser ? (await supabase.auth.getUser()).data?.user : null;
       if (userInfo?.id) {
         const hasRole = await isAdmin(userInfo.id);
         setIsAdminUser(hasRole);
       }
+      
+      setLoading(false);
     };
-    fetchRole();
+    
+    checkAdminStatus();
   }, []);
 
   useEffect(() => {
     const fetchAllProducts = async () => {
+      if (!isAdminUser && loading) return; // Don't fetch if we're not admin or still checking
+
       try {
         const fetchedProducts = await fetchProducts();
         setProducts(fetchedProducts);
@@ -44,8 +68,9 @@ const ProductManager: React.FC = () => {
         setProducts([]);
       }
     };
+    
     fetchAllProducts();
-  }, []);
+  }, [isAdminUser, loading]);
 
   const handleAddProduct = async (productData: any) => {
     try {
@@ -168,6 +193,17 @@ const ProductManager: React.FC = () => {
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-kimcom-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p>Checking admin access...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAdminUser) {
     return (
