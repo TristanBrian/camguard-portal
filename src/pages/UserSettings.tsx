@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import Navbar from '@/components/Navbar';
 import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 
 const UserSettings: React.FC = () => {
   const navigate = useNavigate();
@@ -54,27 +55,14 @@ const UserSettings: React.FC = () => {
           setFormData(prev => ({
             ...prev,
             email: supabaseUser.email || '',
+            // For the remaining fields, we'll use user_metadata if available
+            fullName: supabaseUser.user_metadata?.full_name || '',
+            phone: supabaseUser.user_metadata?.phone || '',
+            address: supabaseUser.user_metadata?.address || '',
           }));
           
-          // Fetch additional profile data from potential profiles table
-          try {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', supabaseUser.id)
-              .single();
-              
-            if (profile) {
-              setFormData(prev => ({
-                ...prev,
-                fullName: profile.full_name || '',
-                phone: profile.phone || '',
-                address: profile.address || '',
-              }));
-            }
-          } catch (err) {
-            console.log('No profile found, using basic user data');
-          }
+          // Note: We're not fetching from a "profiles" table since it doesn't exist yet
+          // If you want to add a profiles table, you would need to create it first with SQL
         } else {
           navigate('/login');
         }
@@ -93,12 +81,6 @@ const UserSettings: React.FC = () => {
       if (user?.id) {
         try {
           // This would fetch from an orders table if it existed
-          // const { data } = await supabase
-          //   .from('orders')
-          //   .select('*')
-          //   .eq('user_id', user.id)
-          //   .order('created_at', { ascending: false });
-          
           // For now, return mock data
           setOrders([]);
         } catch (error) {
@@ -138,18 +120,16 @@ const UserSettings: React.FC = () => {
         } 
         // If using Supabase auth
         else if (user.id) {
-          // This would update a profiles table if it existed
-          // const { error } = await supabase
-          //   .from('profiles')
-          //   .upsert({
-          //     id: user.id,
-          //     full_name: formData.fullName,
-          //     phone: formData.phone,
-          //     address: formData.address,
-          //     updated_at: new Date(),
-          //   });
+          // Update user_metadata in Supabase Auth
+          const { error } = await supabase.auth.updateUser({
+            data: {
+              full_name: formData.fullName,
+              phone: formData.phone,
+              address: formData.address,
+            }
+          });
           
-          // if (error) throw error;
+          if (error) throw error;
         }
         
         toast.success('Profile updated successfully');
@@ -294,7 +274,7 @@ const UserSettings: React.FC = () => {
                     variant="outline" 
                     className="w-full sm:w-auto" 
                     onClick={() => {
-                      if (user.email.includes('@kimcom.com')) {
+                      if (user.email && user.email.includes('@kimcom.com')) {
                         toast.info("Password change not available for demo accounts");
                       } else {
                         // Implement password reset for real users
