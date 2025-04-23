@@ -1,64 +1,185 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, Download, RefreshCw } from "lucide-react";
+import { CalendarIcon, Download, RefreshCw, BarChart3, Activity, ShoppingBag } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-
-// Sample data for charts
-const monthlyData = [
-  { name: 'Jan', sales: 4000, traffic: 2400, orders: 240 },
-  { name: 'Feb', sales: 3000, traffic: 1398, orders: 139 },
-  { name: 'Mar', sales: 2000, traffic: 9800, orders: 980 },
-  { name: 'Apr', sales: 2780, traffic: 3908, orders: 390 },
-  { name: 'May', sales: 1890, traffic: 4800, orders: 480 },
-  { name: 'Jun', sales: 2390, traffic: 3800, orders: 380 },
-  { name: 'Jul', sales: 3490, traffic: 4300, orders: 430 },
-  { name: 'Aug', sales: 3200, traffic: 4100, orders: 410 },
-  { name: 'Sep', sales: 2800, traffic: 3800, orders: 380 },
-  { name: 'Oct', sales: 3100, traffic: 4200, orders: 420 },
-  { name: 'Nov', sales: 3600, traffic: 4500, orders: 450 },
-  { name: 'Dec', sales: 4100, traffic: 5000, orders: 500 },
-];
-
-const categoryData = [
-  { name: 'Electronics', value: 400 },
-  { name: 'Accessories', value: 300 },
-  { name: 'Computers', value: 300 },
-  { name: 'Peripherals', value: 200 },
-  { name: 'Networking', value: 100 },
-];
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
-
-const deviceData = [
-  { name: 'Mobile', value: 65 },
-  { name: 'Desktop', value: 30 },
-  { name: 'Tablet', value: 5 },
-];
+import { toast } from 'sonner';
+import { supabase } from "@/integrations/supabase/client";
+import { fetchProducts } from "@/integrations/supabase/admin";
 
 const Statistics: React.FC = () => {
   const [activeTab, setActiveTab] = useState('sales');
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [timeRange, setTimeRange] = useState('month');
+  const [loading, setLoading] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  const [productData, setProductData] = useState<any[]>([]);
+  const [salesData, setSalesData] = useState<any[]>([]);
+  const [trafficData, setTrafficData] = useState<any[]>([]);
+  const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [deviceData, setDeviceData] = useState([
+    { name: 'Mobile', value: 65 },
+    { name: 'Desktop', value: 30 },
+    { name: 'Tablet', value: 5 },
+  ]);
+  
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+  
+  // Check admin status on mount
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      setLoading(true);
+      
+      // First check for hardcoded admin in localStorage (from AdminLogin)
+      const currentUser = localStorage.getItem('kimcom_current_user');
+      if (currentUser) {
+        try {
+          const parsedUser = JSON.parse(currentUser);
+          if (parsedUser.email === 'admin@kimcom.com') {
+            setIsAdminUser(true);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          // Handle parsing error silently
+        }
+      }
 
-  const refreshData = () => {
-    // In a real app, this would refresh data from the server
-    // For now we'll just show a toast message
-    alert("Data refreshed!");
+      // Then check for Supabase auth
+      const userInfo = supabase.auth.getUser ? (await supabase.auth.getUser()).data?.user : null;
+      if (userInfo?.id) {
+        const { data, error } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userInfo.id)
+          .eq("role", "admin")
+          .maybeSingle();
+          
+        if (!error && data) {
+          setIsAdminUser(true);
+        }
+      }
+      
+      setLoading(false);
+    };
+    
+    checkAdminStatus();
+  }, []);
+
+  // Fetch product data when component mounts
+  useEffect(() => {
+    if (!isAdminUser && loading) return;
+    
+    fetchData();
+  }, [isAdminUser, loading]);
+
+  // Fetch data based on selected date and time range
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch products data
+      const products = await fetchProducts();
+      setProductData(products);
+      
+      // Generate mock sales data (replace with real data when available)
+      generateMockData(products);
+      
+      setLoading(false);
+      toast.success('Data refreshed successfully');
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error('Failed to fetch data');
+      setLoading(false);
+    }
+  };
+
+  // Generate mock data based on real products
+  const generateMockData = (products: any[]) => {
+    // Group products by category
+    const categories: { [key: string]: number } = {};
+    products.forEach(product => {
+      if (categories[product.category]) {
+        categories[product.category] += 1;
+      } else {
+        categories[product.category] = 1;
+      }
+    });
+    
+    // Create category data for pie chart
+    const catData = Object.keys(categories).map(cat => ({
+      name: cat,
+      value: categories[cat]
+    }));
+    setCategoryData(catData);
+    
+    // Generate mock sales data
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const mockSalesData = months.map(month => {
+      const sales = Math.floor(Math.random() * 5000) + 1000;
+      return {
+        name: month,
+        sales: sales,
+        traffic: Math.floor(Math.random() * 2000) + 500,
+        orders: Math.floor(sales / 10)
+      };
+    });
+    
+    setSalesData(mockSalesData);
+    setTrafficData(mockSalesData);
   };
 
   const exportReport = () => {
-    // In a real app, this would generate and download a report
-    // For now we'll just show an alert
-    alert("Report downloaded!");
+    // Generate a simple CSV with sales data
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Month,Sales,Orders,Traffic\n";
+    salesData.forEach(item => {
+      csvContent += `${item.name},${item.sales},${item.orders},${item.traffic}\n`;
+    });
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `statistics_${timeRange}_${format(date || new Date(), 'yyyy-MM-dd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Report downloaded successfully');
   };
+  
+  if (loading && !salesData.length) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-kimcom-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p>Loading statistics data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdminUser) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="bg-red-100 text-red-700 px-6 py-4 rounded shadow">
+          <p>You do not have admin access to this page.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate summary data
+  const totalRevenue = salesData.reduce((total, item) => total + item.sales, 0);
+  const totalOrders = salesData.reduce((total, item) => total + item.orders, 0);
+  const averageOrderValue = totalRevenue / (totalOrders || 1);
+  const visitors = trafficData.reduce((total, item) => total + item.traffic, 0);
 
   return (
     <div className="space-y-6">
@@ -108,11 +229,15 @@ const Statistics: React.FC = () => {
             </Select>
           </div>
 
-          <Button variant="outline" size="icon" onClick={refreshData}>
-            <RefreshCw className="h-4 w-4" />
+          <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
+            {loading ? (
+              <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
           </Button>
           
-          <Button variant="outline" onClick={exportReport}>
+          <Button variant="outline" onClick={exportReport} disabled={loading}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
@@ -121,9 +246,18 @@ const Statistics: React.FC = () => {
 
       <Tabs defaultValue="sales" value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
-          <TabsTrigger value="sales">Sales</TabsTrigger>
-          <TabsTrigger value="traffic">Traffic</TabsTrigger>
-          <TabsTrigger value="products">Products</TabsTrigger>
+          <TabsTrigger value="sales" className="flex items-center">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Sales
+          </TabsTrigger>
+          <TabsTrigger value="traffic" className="flex items-center">
+            <Activity className="h-4 w-4 mr-2" />
+            Traffic
+          </TabsTrigger>
+          <TabsTrigger value="products" className="flex items-center">
+            <ShoppingBag className="h-4 w-4 mr-2" />
+            Products
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="sales" className="space-y-4 pt-4">
@@ -136,7 +270,7 @@ const Statistics: React.FC = () => {
                 <CardDescription>Current Period</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">KSh 45,231.89</div>
+                <div className="text-2xl font-bold">KSh {totalRevenue.toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground">
                   +20.1% from last month
                 </p>
@@ -150,7 +284,7 @@ const Statistics: React.FC = () => {
                 <CardDescription>Current Period</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">+2,350</div>
+                <div className="text-2xl font-bold">+{totalOrders}</div>
                 <p className="text-xs text-muted-foreground">
                   +10.5% from last month
                 </p>
@@ -164,7 +298,7 @@ const Statistics: React.FC = () => {
                 <CardDescription>Current Period</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">KSh 1,950</div>
+                <div className="text-2xl font-bold">KSh {averageOrderValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                 <p className="text-xs text-muted-foreground">
                   +8.2% from last month
                 </p>
@@ -183,7 +317,7 @@ const Statistics: React.FC = () => {
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={monthlyData}
+                    data={salesData}
                     margin={{
                       top: 5,
                       right: 30,
@@ -215,7 +349,7 @@ const Statistics: React.FC = () => {
                 <CardDescription>Current Period</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">45,231</div>
+                <div className="text-2xl font-bold">{visitors.toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground">
                   +12.3% from last month
                 </p>
@@ -229,7 +363,7 @@ const Statistics: React.FC = () => {
                 <CardDescription>Visitors to Customers</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">5.2%</div>
+                <div className="text-2xl font-bold">{((totalOrders / visitors) * 100).toFixed(1)}%</div>
                 <p className="text-xs text-muted-foreground">
                   +0.5% from last month
                 </p>
@@ -295,7 +429,7 @@ const Statistics: React.FC = () => {
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
-                      data={monthlyData}
+                      data={trafficData}
                       margin={{
                         top: 5,
                         right: 30,
@@ -329,7 +463,7 @@ const Statistics: React.FC = () => {
               <CardHeader>
                 <CardTitle>Product Categories</CardTitle>
                 <CardDescription>
-                  Sales distribution across categories
+                  Distribution across categories
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -362,33 +496,27 @@ const Statistics: React.FC = () => {
               <CardHeader>
                 <CardTitle>Top Products</CardTitle>
                 <CardDescription>
-                  Best selling products by revenue
+                  Best selling products by stock level
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[
-                    { name: 'Wireless Keyboard', category: 'Electronics', revenue: 'KSh 675,000', percentage: 70 },
-                    { name: 'LED Monitor 24"', category: 'Electronics', revenue: 'KSh 567,000', percentage: 60 },
-                    { name: 'Ergonomic Mouse', category: 'Electronics', revenue: 'KSh 207,000', percentage: 55 },
-                    { name: 'USB-C Hub', category: 'Accessories', revenue: 'KSh 125,000', percentage: 45 },
-                    { name: 'Wireless Earbuds', category: 'Electronics', revenue: 'KSh 89,000', percentage: 35 },
-                  ].map((product, i) => (
+                  {productData.slice(0, 5).map((product, i) => (
                     <div key={i} className="flex items-center">
                       <div className="flex flex-col gap-0.5 flex-1">
                         <p className="text-sm font-medium">{product.name}</p>
                         <p className="text-xs text-muted-foreground">{product.category}</p>
                       </div>
                       <div className="flex flex-col items-end gap-0.5">
-                        <p className="text-sm font-medium">{product.revenue}</p>
+                        <p className="text-sm font-medium">KSh {product.price.toLocaleString()}</p>
                         <div className="flex items-center gap-1 text-xs">
                           <div className="w-20 h-2 rounded-full bg-gray-100 overflow-hidden">
                             <div
                               className="h-full bg-blue-600 rounded-full"
-                              style={{ width: `${product.percentage}%` }}
+                              style={{ width: `${(product.stock / 10) * 100}%` }}
                             />
                           </div>
-                          <span>{product.percentage}%</span>
+                          <span>{product.stock} in stock</span>
                         </div>
                       </div>
                     </div>
