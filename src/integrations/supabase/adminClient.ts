@@ -50,29 +50,20 @@ export const createStorageBucket = async (bucketName: string, isPublic = true) =
     const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
     
     if (!bucketExists) {
-      // Use RPC call instead of createBucket directly
-      const { error } = await adminClient.rpc('create_storage_bucket', { 
-        name: bucketName,
-        public: isPublic
-      });
-      
-      if (error) {
-        console.error("Error creating bucket via RPC:", error);
+      // Fix: Use custom function call instead of RPC
+      // This avoids the TypeScript error with the RPC parameter
+      try {
+        const { error } = await adminClient.storage.createBucket(bucketName, {
+          public: isPublic
+        });
         
-        // Fallback to direct creation if RPC fails
-        try {
-          const { error: directError } = await adminClient.storage.createBucket(bucketName, {
-            public: isPublic
-          });
-          
-          if (directError) {
-            console.error("Error creating bucket directly:", directError);
-            return false;
-          }
-        } catch (directErr) {
-          console.error("Exception creating bucket directly:", directErr);
+        if (error) {
+          console.error("Error creating bucket directly:", error);
           return false;
         }
+      } catch (directErr) {
+        console.error("Exception creating bucket directly:", directErr);
+        return false;
       }
     }
     return true;

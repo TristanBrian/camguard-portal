@@ -165,7 +165,8 @@ const ProductManager: React.FC = () => {
       let galleryImageUrls: string[] = [];
       if (productData.galleryImages && productData.galleryImages.length > 0) {
         try {
-          const galleryFiles = Array.from(productData.galleryImages);
+          // Fix the type issue by using proper type assertion
+          const galleryFiles = Array.from(productData.galleryImages).filter(file => file instanceof File) as File[];
           console.log(`Uploading ${galleryFiles.length} gallery images`);
           galleryImageUrls = await uploadGalleryImages(galleryFiles, 'new-product');
           console.log(`Gallery images uploaded successfully:`, galleryImageUrls);
