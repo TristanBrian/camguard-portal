@@ -39,7 +39,7 @@ const ProductManager: React.FC = () => {
       if (currentUser) {
         try {
           const parsedUser = JSON.parse(currentUser);
-          if (parsedUser.role === 'admin') {
+          if (parsedUser.role === 'admin' && parsedUser.email === 'admin@kimcom.com') {
             setIsAdminUser(true);
             setLoading(false);
             
@@ -69,10 +69,14 @@ const ProductManager: React.FC = () => {
         } else {
           console.log("No authenticated user found in Supabase");
           setIsAdminUser(false);
+          // Redirect to login page if no user found
+          setTimeout(() => navigate('/admin-login'), 1500);
         }
       } catch (err) {
         console.error("Error checking admin status:", err);
         setIsAdminUser(false);
+        // Redirect to login page if error occurs
+        setTimeout(() => navigate('/admin-login'), 1500);
       }
       
       setLoading(false);
@@ -88,7 +92,7 @@ const ProductManager: React.FC = () => {
         console.warn("Storage bucket setup failed, some features may not work");
       }
     });
-  }, []);
+  }, [navigate]);
 
   const fetchAllProducts = async () => {
     if (!isAdminUser && loading) return; // Don't fetch if we're not admin or still checking
@@ -146,12 +150,15 @@ const ProductManager: React.FC = () => {
       }
       
       // Try to login as admin to ensure we have proper permissions
-      await ensureAdminAuth().catch(err => {
+      try {
+        await ensureAdminAuth();
+      } catch (err) {
         console.error("Admin auth check failed:", err);
         toast.error("Administrator authentication failed. Please login again.");
         setTimeout(() => navigate('/admin-login'), 1500);
-        throw new Error("Admin authentication required");
-      });
+        setRefreshing(false);
+        return;
+      }
       
       let imageUrl = undefined;
       if (productData.image instanceof File) {
@@ -174,7 +181,8 @@ const ProductManager: React.FC = () => {
       if (productData.galleryImages && productData.galleryImages.length > 0) {
         try {
           // Fix the type issue by using proper type assertion
-          const galleryFiles = Array.from(productData.galleryImages).filter(file => file instanceof File) as File[];
+          const galleryFiles = Array.from(productData.galleryImages)
+            .filter(file => file instanceof File) as File[];
           console.log(`Uploading ${galleryFiles.length} gallery images`);
           galleryImageUrls = await uploadGalleryImages(galleryFiles, 'new-product');
           console.log(`Gallery images uploaded successfully:`, galleryImageUrls);
