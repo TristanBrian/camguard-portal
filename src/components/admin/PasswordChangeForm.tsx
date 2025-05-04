@@ -50,6 +50,30 @@ const PasswordChangeForm: React.FC = () => {
     setIsSubmitting(true);
     
     try {
+      // Check for localStorage admin user
+      const currentUser = localStorage.getItem('kimcom_current_user');
+      if (currentUser) {
+        try {
+          const parsedUser = JSON.parse(currentUser);
+          if (parsedUser.email === 'admin@kimcom.com' && parsedUser.role === 'admin') {
+            // For hardcoded admin, verify current password
+            if (data.currentPassword !== 'admin123') {
+              throw new Error('Current password is incorrect');
+            }
+            
+            // Update the hardcoded admin password in localStorage
+            localStorage.setItem('kimcom_admin_password', data.newPassword);
+            toast.success("Password updated successfully!");
+            form.reset();
+            setIsSubmitting(false);
+            return;
+          }
+        } catch (e) {
+          // Continue to Supabase auth update if not a valid admin user
+        }
+      }
+      
+      // Use Supabase to update the password for regular users
       const { error } = await supabase.auth.updateUser({
         password: data.newPassword
       });

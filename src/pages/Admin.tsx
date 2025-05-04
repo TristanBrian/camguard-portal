@@ -1,12 +1,14 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from '@/components/ui/sidebar';
-import { Home, Package, BarChart2, TrendingUp, Settings, LogOut, Shield, AlertTriangle } from 'lucide-react';
+import { Home, Package, BarChart2, TrendingUp, Settings, LogOut, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import AdminSettings from '@/components/admin/AdminSettings';
+import { ensureAdminAuth } from '@/integrations/supabase/adminClient';
+import { supabase } from '@/integrations/supabase/client';
 
 const Admin: React.FC = () => {
   const navigate = useNavigate();
@@ -21,14 +23,54 @@ const Admin: React.FC = () => {
     return 'dashboard';
   });
   
+  // Check authentication on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        await ensureAdminAuth();
+      } catch (error) {
+        console.error("Admin authentication check failed:", error);
+        toast.error("Authentication required for admin access");
+        navigate('/admin-login');
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
+  
   const handleNavigation = (path: string, item: string) => {
     setSelectedItem(item);
     navigate(path);
   };
 
-  const handleLogout = () => {
-    toast.success('Successfully logged out');
-    navigate('/');
+  const handleLogout = async () => {
+    // Check if we're using the hardcoded admin
+    const currentUser = localStorage.getItem('kimcom_current_user');
+    if (currentUser) {
+      try {
+        const parsedUser = JSON.parse(currentUser);
+        if (parsedUser.email === 'admin@kimcom.com') {
+          // Remove hardcoded admin from localStorage
+          localStorage.removeItem('kimcom_current_user');
+          toast.success('Successfully logged out');
+          navigate('/admin-login');
+          return;
+        }
+      } catch (e) {
+        // Continue to Supabase signout
+      }
+    }
+    
+    // Try Supabase signout
+    try {
+      await supabase.auth.signOut();
+      toast.success('Successfully logged out');
+    } catch (error) {
+      console.error("Error during logout:", error);
+      toast.error("Logout failed");
+    }
+    
+    navigate('/admin-login');
   };
 
   // Determine what to render in the main content area

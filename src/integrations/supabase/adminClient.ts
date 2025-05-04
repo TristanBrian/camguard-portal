@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -10,6 +11,11 @@ export const adminClient = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE
   auth: {
     autoRefreshToken: false,
     persistSession: false,
+  },
+  global: {
+    headers: {
+      'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+    },
   },
 });
 

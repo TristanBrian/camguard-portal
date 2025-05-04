@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Lock, User } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { supabase } from "@/integrations/supabase/client";
 import { isAdmin } from "@/integrations/supabase/admin";
+import { adminClient } from "@/integrations/supabase/adminClient";
 
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -30,7 +30,7 @@ const AdminLogin: React.FC = () => {
         if (currentUser) {
           try {
             const parsedUser = JSON.parse(currentUser);
-            if (parsedUser.role === 'admin') {
+            if (parsedUser.email === 'admin@kimcom.com' && parsedUser.role === 'admin') {
               navigate('/admin');
             }
           } catch (e) {
@@ -61,28 +61,31 @@ const AdminLogin: React.FC = () => {
     }
 
     // Otherwise, try Supabase sign in
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error || !data.session?.user) {
-      toast.error('Invalid credentials or unable to log in');
+      if (error || !data.session?.user) {
+        throw new Error('Invalid credentials or unable to log in');
+      }
+
+      // Check if user is admin in user_roles table
+      const hasRole = await isAdmin(data.session.user.id);
+
+      if (hasRole) {
+        toast.success('Login successful');
+        navigate('/admin');
+      } else {
+        toast.error('You do not have admin permissions.');
+        await supabase.auth.signOut();
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Invalid credentials or unable to log in');
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // Check if user is admin in user_roles table
-    const hasRole = await isAdmin(data.session.user.id);
-
-    if (hasRole) {
-      toast.success('Login successful');
-      navigate('/admin');
-    } else {
-      toast.error('You do not have admin permissions.');
-      await supabase.auth.signOut();
-    }
-    setLoading(false);
   };
 
   return (
