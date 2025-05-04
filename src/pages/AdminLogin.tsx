@@ -24,6 +24,19 @@ const AdminLogin: React.FC = () => {
         if (hasRole) {
           navigate('/admin');
         }
+      } else {
+        // Also check for hardcoded admin in localStorage
+        const currentUser = localStorage.getItem('kimcom_current_user');
+        if (currentUser) {
+          try {
+            const parsedUser = JSON.parse(currentUser);
+            if (parsedUser.role === 'admin') {
+              navigate('/admin');
+            }
+          } catch (e) {
+            // Handle parsing error silently
+          }
+        }
       }
     };
     checkAdmin();

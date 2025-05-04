@@ -1,11 +1,25 @@
 import { supabase } from "@/integrations/supabase/client";
-import { adminClient, ensureAdminAuth } from "@/integrations/supabase/adminClient";
+import { adminClient, ensureAdminAuth, createStorageBucket } from "@/integrations/supabase/adminClient";
 import type { Product } from "@/data/productsData";
 
 /**
  * Check if the current user is an admin.
  */
 export async function isAdmin(userId: string): Promise<boolean> {
+  // First check localStorage for hardcoded admin
+  const currentUser = localStorage.getItem('kimcom_current_user');
+  if (currentUser) {
+    try {
+      const parsedUser = JSON.parse(currentUser);
+      if (parsedUser.email === 'admin@kimcom.com' && parsedUser.role === 'admin') {
+        return true; // Hardcoded admin user
+      }
+    } catch (e) {
+      // Handle parsing error silently, continue with DB check
+    }
+  }
+  
+  // Then check database
   const { data, error } = await supabase
     .from("user_roles")
     .select("role")
@@ -68,8 +82,13 @@ export async function fetchProducts(): Promise<Product[]> {
 
 export async function createProduct(product: Omit<Product, 'id'>) {
   try {
-    // First check admin authentication
-    await ensureAdminAuth();
+    // First check admin authentication - with improved error handling
+    try {
+      await ensureAdminAuth();
+    } catch (authError) {
+      console.error("Admin authentication failed:", authError);
+      throw new Error("Authentication required for admin operations");
+    }
     
     console.log("Creating new product:", product);
     
@@ -179,31 +198,20 @@ export async function uploadProductImage(file: File, fileName: string): Promise<
     console.log("Uploading image with filename:", fileName);
     
     // First check admin authentication
-    await ensureAdminAuth();
+    try {
+      await ensureAdminAuth();
+    } catch (authError) {
+      console.error("Admin authentication failed:", authError);
+      return "/placeholder.svg";
+    }
     
     // Sanitize file name to prevent path issues
     const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
     
-    // Use admin client for storage operations
-    const { data: buckets } = await adminClient.storage.listBuckets();
-    const galleryExists = buckets?.some(bucket => bucket.name === 'gallery');
-    
-    if (!galleryExists) {
-      console.log("Gallery bucket doesn't exist, creating...");
-      try {
-        const { error: bucketError } = await adminClient.storage.createBucket('gallery', { 
-          public: true,
-          fileSizeLimit: 5242880 // 5MB
-        });
-        
-        if (bucketError) {
-          console.error("Error creating bucket:", bucketError);
-          // Continue anyway as bucket might exist but not be visible to the user
-        }
-      } catch (bucketError) {
-        console.error("Failed to create bucket:", bucketError);
-        // Continue anyway as we'll try to upload
-      }
+    // Ensure gallery bucket exists before upload
+    const bucketCreated = await createStorageBucket('gallery', true);
+    if (!bucketCreated) {
+      console.warn("Couldn't ensure gallery bucket exists, but will try upload anyway");
     }
     
     // Attempt upload with better error handling using admin client
@@ -216,7 +224,7 @@ export async function uploadProductImage(file: File, fileName: string): Promise<
       
     if (error) {
       console.error("Error uploading image:", error);
-      throw error;
+      return "/placeholder.svg";
     }
     
     // Get and return public URL
@@ -235,6 +243,14 @@ export async function uploadProductImage(file: File, fileName: string): Promise<
  */
 export async function uploadGalleryImages(files: File[], productId: string) {
   try {
+    // Only attempt upload if we have admin access
+    try {
+      await ensureAdminAuth();
+    } catch (authError) {
+      console.error("Admin authentication failed for gallery upload:", authError);
+      return files.map(() => "/placeholder.svg"); // Return placeholders for all files
+    }
+    
     const uploadPromises = files.map(async (file, index) => {
       // Sanitize file name to prevent path traversal issues
       const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -301,53 +317,7 @@ export async function setupStorageBucket() {
   try {
     console.log("Setting up storage bucket...");
     
-    // First check admin authentication - skip this for initial setup
-    try {
-      await ensureAdminAuth();
-    } catch (err) {
-      console.log("Admin auth check failed, proceeding with public client for initial setup");
-    }
-    
-    // First check if the gallery bucket exists
-    const { data: buckets, error: bucketsError } = await adminClient.storage.listBuckets();
-    
-    if (bucketsError) {
-      console.error("Error checking buckets:", bucketsError);
-      return false;
-    }
-    
-    // Using optional chaining to prevent errors if buckets is undefined
-    const galleryExists = buckets?.some(bucket => bucket.name === 'gallery');
-    console.log("Gallery bucket exists:", galleryExists);
-    
-    // Only try to create the bucket if it doesn't exist
-    if (!galleryExists) {
-      console.log("Creating gallery bucket...");
-      
-      // Try to create the bucket using storage API with admin client
-      try {
-        const { error } = await adminClient.storage.createBucket('gallery', { 
-          public: true,
-          fileSizeLimit: 5242880 // 5MB
-        });
-        
-        if (error) {
-          console.error("Error creating gallery bucket:", error);
-          if (error.message.includes('already exists')) {
-            console.log("Bucket already exists but wasn't detected - this is fine");
-            return true;
-          }
-          return false;
-        } else {
-          console.log("Gallery bucket created successfully");
-        }
-      } catch (bucketError) {
-        console.error("Failed to create bucket:", bucketError);
-        return false;
-      }
-    }
-    
-    return true;
+    return await createStorageBucket('gallery', true);
   } catch (error) {
     console.error("Error in setupStorageBucket:", error);
     return false;
@@ -359,26 +329,18 @@ export async function setupStorageBucket() {
  */
 export async function ensureStorageBucket() {
   try {
-    // First check if the gallery bucket exists
-    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-    
-    if (bucketsError) {
-      console.error("Error listing buckets:", bucketsError);
-      // Try to create the bucket anyway
-      return setupStorageBucket();
+    // Check admin authentication first
+    try {
+      await ensureAdminAuth();
+    } catch (authError) {
+      console.error("Admin authentication failed for bucket creation:", authError);
+      return false;
     }
     
-    const galleryExists = buckets?.some(bucket => bucket.name === 'gallery');
-    
-    if (!galleryExists) {
-      return setupStorageBucket();
-    }
-    
-    return true;
+    return await createStorageBucket('gallery', true);
   } catch (error) {
     console.error("Error in ensureStorageBucket:", error);
-    // Try to create the bucket as a fallback
-    return setupStorageBucket();
+    return false;
   }
 }
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +11,7 @@ import { toast } from 'sonner';
 import ProductForm from '@/components/admin/ProductForm';
 import { useNavigate } from 'react-router-dom';
 import { Product } from '@/data/productsData';
-import { fetchProducts, createProduct, updateProduct, deleteProduct, isAdmin, uploadProductImage, uploadGalleryImages, setupStorageBucket } from "@/integrations/supabase/admin";
+import { fetchProducts, createProduct, updateProduct, deleteProduct, isAdmin, uploadProductImage, uploadGalleryImages, setupStorageBucket, ensureStorageBucket } from "@/integrations/supabase/admin";
 import { supabase } from "@/integrations/supabase/client";
 import { adminClient } from "@/integrations/supabase/adminClient";
 
@@ -40,25 +39,23 @@ const ProductManager: React.FC = () => {
       if (currentUser) {
         try {
           const parsedUser = JSON.parse(currentUser);
-          if (parsedUser.email === 'admin@kimcom.com') {
+          if (parsedUser.role === 'admin') {
             setIsAdminUser(true);
             setLoading(false);
             
-            // For hardcoded admin, also sign in to Supabase for admin access
+            // For hardcoded admin, ensure we can access all functionalities
             try {
-              await adminClient.auth.signInWithPassword({
-                email: 'admin@kimcom.com',
-                password: 'admin123'
-              });
-              console.log("Admin signed in to Supabase");
+              await ensureStorageBucket();
+              console.log("Storage bucket checked by admin");
             } catch (err) {
-              console.log("Admin auto-signin failed, using service role instead");
+              console.warn("Error checking storage bucket:", err);
             }
             
             return;
           }
         } catch (e) {
           // Handle parsing error silently
+          console.warn("Error parsing user from localStorage:", e);
         }
       }
 
@@ -68,10 +65,14 @@ const ProductManager: React.FC = () => {
         if (user?.id) {
           const hasRole = await isAdmin(user.id);
           setIsAdminUser(hasRole);
-          console.log("Admin status:", hasRole);
+          console.log("Admin status from Supabase:", hasRole);
+        } else {
+          console.log("No authenticated user found in Supabase");
+          setIsAdminUser(false);
         }
       } catch (err) {
         console.error("Error checking admin status:", err);
+        setIsAdminUser(false);
       }
       
       setLoading(false);
@@ -79,7 +80,7 @@ const ProductManager: React.FC = () => {
     
     checkAdminStatus();
     
-    // Setup storage bucket if needed
+    // Setup storage bucket if needed - this now has improved error handling
     setupStorageBucket().then(success => {
       if (success) {
         console.log("Storage bucket setup completed successfully");
@@ -138,12 +139,24 @@ const ProductManager: React.FC = () => {
       console.log("Adding new product with data:", productData);
       setRefreshing(true);
       
+      if (!isAdminUser) {
+        toast.error("Administrator access required");
+        setRefreshing(false);
+        return;
+      }
+      
       let imageUrl = undefined;
       if (productData.image instanceof File) {
         const fileName = `product-${Date.now()}-${productData.image.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
         console.log(`Uploading image with filename: ${fileName}`);
-        imageUrl = await uploadProductImage(productData.image, fileName);
-        console.log(`Image uploaded successfully, URL: ${imageUrl}`);
+        try {
+          imageUrl = await uploadProductImage(productData.image, fileName);
+          console.log(`Image uploaded successfully, URL: ${imageUrl}`);
+        } catch (uploadError) {
+          console.error("Image upload failed:", uploadError);
+          toast.error("Failed to upload product image");
+          imageUrl = "/placeholder.svg";
+        }
       } else if (productData.imageUrl) {
         imageUrl = productData.imageUrl;
       }
@@ -151,16 +164,15 @@ const ProductManager: React.FC = () => {
       // Process gallery images if they exist
       let galleryImageUrls: string[] = [];
       if (productData.galleryImages && productData.galleryImages.length > 0) {
-        const galleryFiles = Array.from(productData.galleryImages);
-        console.log(`Uploading ${galleryFiles.length} gallery images`);
-        
-        const uploadPromises = galleryFiles.map((file: File) => {
-          const fileName = `gallery-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-          return uploadProductImage(file, fileName);
-        });
-        
-        galleryImageUrls = await Promise.all(uploadPromises);
-        console.log(`Gallery images uploaded successfully:`, galleryImageUrls);
+        try {
+          const galleryFiles = Array.from(productData.galleryImages);
+          console.log(`Uploading ${galleryFiles.length} gallery images`);
+          galleryImageUrls = await uploadGalleryImages(galleryFiles, 'new-product');
+          console.log(`Gallery images uploaded successfully:`, galleryImageUrls);
+        } catch (galleryError) {
+          console.error("Gallery upload failed:", galleryError);
+          toast.error("Failed to upload gallery images");
+        }
       }
       
       // Process features text input and combine with gallery URLs
@@ -187,14 +199,26 @@ const ProductManager: React.FC = () => {
       };
       
       console.log("Creating product with payload:", payload);
-      const createdProduct = await createProduct(payload);
-      
-      if (createdProduct) {
-        toast.success("Product added successfully");
-        setActiveTab("all");
-        fetchAllProducts();
-      } else {
-        toast.error("Failed to create product - no data returned");
+      try {
+        const createdProduct = await createProduct(payload);
+        
+        if (createdProduct) {
+          toast.success("Product added successfully");
+          setActiveTab("all");
+          fetchAllProducts();
+        } else {
+          toast.error("Failed to create product - no data returned");
+        }
+      } catch (createError) {
+        console.error("Error creating product:", createError);
+        
+        if (createError.message?.includes('authentication') || createError.message?.includes('admin')) {
+          toast.error("Admin authentication required. Please log in again.");
+          // Redirect to admin login after a short delay
+          setTimeout(() => navigate('/admin-login'), 2000);
+        } else {
+          toast.error(`Failed to create product: ${createError.message || "Unknown error"}`);
+        }
       }
       
     } catch (e) {

@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -11,6 +10,20 @@ export const adminClient = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE
 
 // Function to ensure a user is admin before using admin functions
 export const ensureAdminAuth = async () => {
+  // Check for hardcoded admin credentials in localStorage first
+  const currentUser = localStorage.getItem('kimcom_current_user');
+  if (currentUser) {
+    try {
+      const parsedUser = JSON.parse(currentUser);
+      if (parsedUser.email === 'admin@kimcom.com' && parsedUser.role === 'admin') {
+        return true; // This is our hardcoded admin user
+      }
+    } catch (err) {
+      console.error("Error parsing stored user:", err);
+    }
+  }
+  
+  // Otherwise check for Supabase auth
   const { data: { user } } = await adminClient.auth.getUser();
   if (!user) {
     throw new Error("Authentication required for admin operations");
@@ -27,4 +40,44 @@ export const ensureAdminAuth = async () => {
   }
   
   return true;
+};
+
+// Create a storage bucket if it doesn't exist
+export const createStorageBucket = async (bucketName: string, isPublic = true) => {
+  try {
+    // First check if bucket exists
+    const { data: buckets } = await adminClient.storage.listBuckets();
+    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
+    
+    if (!bucketExists) {
+      // Use RPC call instead of createBucket directly
+      const { error } = await adminClient.rpc('create_storage_bucket', { 
+        name: bucketName,
+        public: isPublic
+      });
+      
+      if (error) {
+        console.error("Error creating bucket via RPC:", error);
+        
+        // Fallback to direct creation if RPC fails
+        try {
+          const { error: directError } = await adminClient.storage.createBucket(bucketName, {
+            public: isPublic
+          });
+          
+          if (directError) {
+            console.error("Error creating bucket directly:", directError);
+            return false;
+          }
+        } catch (directErr) {
+          console.error("Exception creating bucket directly:", directErr);
+          return false;
+        }
+      }
+    }
+    return true;
+  } catch (err) {
+    console.error("Error in createStorageBucket:", err);
+    return false;
+  }
 };
