@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { Product } from '@/data/productsData';
 import { fetchProducts, createProduct, updateProduct, deleteProduct, isAdmin, uploadProductImage, uploadGalleryImages, setupStorageBucket, ensureStorageBucket } from "@/integrations/supabase/admin";
 import { supabase } from "@/integrations/supabase/client";
-import { adminClient } from "@/integrations/supabase/adminClient";
+import { adminClient, ensureAdminAuth } from "@/integrations/supabase/adminClient";
 
 const ProductManager: React.FC = () => {
   const navigate = useNavigate();
