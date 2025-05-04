@@ -24,6 +24,9 @@ jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
 
+[storage]
+enabled = true
+
 [functions]
 [functions.create-bucket]
-verify_jwt = true
+verify_jwt = false

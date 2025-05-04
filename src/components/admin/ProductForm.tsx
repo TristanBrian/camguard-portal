@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -416,23 +415,22 @@ const ProductForm: React.FC<ProductFormProps> = ({
                         <p className="text-xs text-gray-400">PNG, JPG or WEBP (max. 2MB)</p>
                         
                         <div className="mt-4 flex justify-center">
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => document.getElementById('file-upload')?.click()}
+                          <label 
+                            htmlFor="file-upload"
+                            className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <Upload className="h-4 w-4 mr-2" />
                             Select File
-                          </Button>
-                          <input
-                            id="file-upload"
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleImageChange}
-                            onClick={(e) => e.stopPropagation()}
-                          />
+                            <input
+                              id="file-upload"
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={handleImageChange}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </label>
                         </div>
                       </div>
                     ) : (
@@ -452,24 +450,22 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   
                   <div className="border-2 border-dashed rounded-lg p-4 mt-2">
                     <div className="flex justify-center mb-4">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => document.getElementById('gallery-upload')?.click()}
+                      <label 
+                        htmlFor="gallery-upload"
+                        className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
                       >
                         <Image className="h-4 w-4 mr-2" />
                         Add Gallery Images
-                      </Button>
-                      <input
-                        id="gallery-upload"
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={handleGalleryImagesChange}
-                        onClick={(e) => e.stopPropagation()}
-                      />
+                        <input
+                          id="gallery-upload"
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={handleGalleryImagesChange}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </label>
                     </div>
 
                     {galleryPreviews.length > 0 && (
