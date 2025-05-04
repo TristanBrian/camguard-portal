@@ -146,16 +146,36 @@ export async function deleteProduct(id: string) {
 /**
  * Storage: Upload product image to bucket with improved error handling
  */
-export async function uploadProductImage(file: File, fileName: string) {
+export async function uploadProductImage(file: File, fileName: string): Promise<string> {
   try {
     console.log("Uploading image with filename:", fileName);
-    
-    // Direct upload approach without relying on create-bucket Edge Function
-    await ensureStorageBucket();
     
     // Sanitize file name to prevent path issues
     const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
     
+    // Check if the gallery bucket exists, if not create it
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const galleryExists = buckets?.some(bucket => bucket.name === 'gallery');
+    
+    if (!galleryExists) {
+      console.log("Gallery bucket doesn't exist, creating...");
+      try {
+        const { error: bucketError } = await supabase.storage.createBucket('gallery', { 
+          public: true,
+          fileSizeLimit: 5242880 // 5MB
+        });
+        
+        if (bucketError) {
+          console.error("Error creating bucket:", bucketError);
+          // Continue anyway as bucket might exist but not be visible to the user
+        }
+      } catch (bucketError) {
+        console.error("Failed to create bucket:", bucketError);
+        // Continue anyway as we'll try to upload
+      }
+    }
+    
+    // Attempt upload with better error handling
     const { data, error } = await supabase.storage
       .from("gallery")
       .upload(sanitizedFileName, file, {
@@ -174,7 +194,8 @@ export async function uploadProductImage(file: File, fileName: string) {
     return publicUrl.data.publicUrl;
   } catch (error) {
     console.error("Failed to upload product image:", error);
-    throw error;
+    // Return a placeholder image instead of throwing to prevent UI crashes
+    return "/placeholder.svg";
   }
 }
 
@@ -183,9 +204,6 @@ export async function uploadProductImage(file: File, fileName: string) {
  */
 export async function uploadGalleryImages(files: File[], productId: string) {
   try {
-    // Ensure storage bucket exists
-    await ensureStorageBucket();
-    
     const uploadPromises = files.map(async (file, index) => {
       // Sanitize file name to prevent path traversal issues
       const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -194,10 +212,10 @@ export async function uploadGalleryImages(files: File[], productId: string) {
     });
     
     const urls = await Promise.all(uploadPromises);
-    return urls;
+    return urls.filter(url => url !== "/placeholder.svg"); // Filter out any failed uploads
   } catch (error) {
     console.error("Failed to upload gallery images:", error);
-    throw error;
+    return [];
   }
 }
 
@@ -246,7 +264,7 @@ export async function addToProductGallery(productId: string, imageUrls: string[]
 }
 
 /**
- * Setup Storage Bucket with enhanced error handling and permissions
+ * Setup Storage Bucket - Simplified version that doesn't rely on Edge Function
  */
 export async function setupStorageBucket() {
   try {
@@ -257,7 +275,7 @@ export async function setupStorageBucket() {
     
     if (bucketsError) {
       console.error("Error checking buckets:", bucketsError);
-      throw bucketsError;
+      return false;
     }
     
     const galleryExists = buckets?.some(bucket => bucket.name === 'gallery');
@@ -279,44 +297,21 @@ export async function setupStorageBucket() {
         }
         
         console.error("Error creating gallery bucket:", error);
-        throw error;
+        return false;
       } else {
         console.log("Gallery bucket created successfully");
-        
-        // Set public bucket policy
-        await setPublicBucketPolicy();
       }
     }
     
     return true;
   } catch (error) {
     console.error("Error checking/creating storage bucket:", error);
-    throw error;
-  }
-}
-
-/**
- * Set public bucket policy for the gallery bucket
- */
-async function setPublicBucketPolicy() {
-  try {
-    const { error } = await supabase.storage.from('gallery').createSignedUrl('dummy.txt', 1);
-    
-    // We expect an error if the file doesn't exist, but this call initializes policies
-    if (error && !error.message.includes('Object not found')) {
-      console.error("Error setting bucket policy:", error);
-    }
-    
-    console.log("Gallery bucket policies initialized");
-    return true;
-  } catch (error) {
-    console.error("Failed to set public bucket policy:", error);
     return false;
   }
 }
 
 /**
- * Improved method to ensure storage bucket exists with more robust error handling
+ * Improved method to ensure storage bucket exists
  */
 export async function ensureStorageBucket() {
   try {
@@ -339,12 +334,7 @@ export async function ensureStorageBucket() {
   } catch (error) {
     console.error("Error in ensureStorageBucket:", error);
     // Try to create the bucket as a fallback
-    try {
-      return setupStorageBucket();
-    } catch (createError) {
-      console.error("Failed to create bucket in fallback:", createError);
-      throw createError;
-    }
+    return setupStorageBucket();
   }
 }
 

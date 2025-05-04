@@ -65,6 +65,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const [imageUrl, setImageUrl] = useState(initialData?.imageUrl || '');
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -85,8 +86,16 @@ const ProductForm: React.FC<ProductFormProps> = ({
   });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUploadError(null);
     const file = e.target.files?.[0];
     if (file) {
+      // Check file size - limit to 5MB
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadError("File size must be less than 5MB");
+        toast.error("File size must be less than 5MB");
+        return;
+      }
+      
       setImageFile(file);
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -97,12 +106,23 @@ const ProductForm: React.FC<ProductFormProps> = ({
   };
 
   const handleGalleryImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUploadError(null);
     const files = e.target.files;
     if (files && files.length > 0) {
-      const fileArray = Array.from(files);
-      setGalleryFiles(prev => [...prev, ...fileArray]);
+      // Check each file size
+      const validFiles = Array.from(files).filter(file => {
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error(`File ${file.name} is too large (max 5MB)`);
+          return false;
+        }
+        return true;
+      });
       
-      const newPreviewPromises = fileArray.map(file => {
+      if (validFiles.length === 0) return;
+      
+      setGalleryFiles(prev => [...prev, ...validFiles]);
+      
+      const newPreviewPromises = validFiles.map(file => {
         return new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onload = (event) => {
@@ -126,6 +146,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const url = e.target.value;
     setImageUrl(url);
+    setUploadError(null);
     if (url) {
       setImagePreview(url);
     } else {
@@ -137,10 +158,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
     setImageFile(null);
     setImageUrl('');
     setImagePreview(null);
+    setUploadError(null);
   };
 
   const handleImageSourceChange = (value: 'file' | 'url') => {
     setImageSource(value);
+    setUploadError(null);
     if (value === 'file') {
       setImageUrl('');
     } else {
@@ -150,26 +173,33 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
   const handleSubmit = (data: ProductFormValues) => {
     setIsLoading(true);
+    setUploadError(null);
     
-    // Combining form data with the image
-    const submitData = {
-      ...data,
-      image: imageFile || undefined,
-      imageUrl: imageSource === 'url' ? imageUrl : undefined,
-      galleryImages: galleryFiles.length > 0 ? galleryFiles : undefined,
-      difficulty: data.difficulty || "Medium",
-    };
-    
-    setTimeout(() => {
+    try {
+      // Combining form data with the image
+      const submitData = {
+        ...data,
+        image: imageFile || undefined,
+        imageUrl: imageSource === 'url' ? imageUrl : undefined,
+        galleryImages: galleryFiles.length > 0 ? galleryFiles : undefined,
+        difficulty: data.difficulty || "Medium",
+      };
+      
       onSubmit(submitData);
-      setIsLoading(false);
+      
       if (!isEditing) {
         form.reset();
         clearImage();
         setGalleryFiles([]);
         setGalleryPreviews([]);
+        toast.success("Product data submitted");
       }
-    }, 500);
+    } catch (error) {
+      console.error("Error submitting product:", error);
+      toast.error("Failed to submit product data");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -418,7 +448,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
                           <label 
                             htmlFor="file-upload"
                             className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
-                            onClick={(e) => e.stopPropagation()}
                           >
                             <Upload className="h-4 w-4 mr-2" />
                             Select File
@@ -428,10 +457,13 @@ const ProductForm: React.FC<ProductFormProps> = ({
                               accept="image/*"
                               className="hidden"
                               onChange={handleImageChange}
-                              onClick={(e) => e.stopPropagation()}
                             />
                           </label>
                         </div>
+                        
+                        {uploadError && (
+                          <p className="text-sm text-red-500 mt-2">{uploadError}</p>
+                        )}
                       </div>
                     ) : (
                       <div className="p-8 text-center">
@@ -463,7 +495,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
                           multiple
                           className="hidden"
                           onChange={handleGalleryImagesChange}
-                          onClick={(e) => e.stopPropagation()}
                         />
                       </label>
                     </div>
