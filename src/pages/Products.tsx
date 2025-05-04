@@ -41,17 +41,29 @@ const Products = () => {
   const [isProductDetailOpen, setIsProductDetailOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  // Fetch products from database
+  // Enhanced fetch products function with better error handling
   useEffect(() => {
     const loadProducts = async () => {
       try {
         setLoading(true);
+        setError(null);
+        console.log("Fetching products...");
+        
         const dbProducts = await fetchProducts();
-        setProducts(dbProducts);
+        
+        if (dbProducts && dbProducts.length > 0) {
+          console.log(`Successfully loaded ${dbProducts.length} products`);
+          setProducts(dbProducts);
+        } else {
+          console.log("No products found in the database");
+          toast.warning("No products found. Please check back later.");
+        }
         setLoading(false);
       } catch (error) {
         console.error("Error fetching products:", error);
+        setError("Failed to load products. Please try again.");
         toast.error("Failed to load products");
         setLoading(false);
       }
@@ -258,16 +270,48 @@ const Products = () => {
   const handleRefreshProducts = async () => {
     try {
       setLoading(true);
+      setError(null);
       const dbProducts = await fetchProducts();
       setProducts(dbProducts);
       setLoading(false);
-      toast.success("Products refreshed");
+      toast.success("Products refreshed successfully");
     } catch (error) {
       console.error("Error fetching products:", error);
+      setError("Failed to refresh products. Please try again.");
       toast.error("Failed to refresh products");
       setLoading(false);
     }
   };
+
+  const handleGoToAdmin = () => {
+    navigate('/admin/products');
+  };
+
+  // Check if the user is an admin
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  useEffect(() => {
+    const checkIfAdmin = async () => {
+      if (!isLoggedIn || !currentUser) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", currentUser.id)
+          .eq("role", "admin")
+          .maybeSingle();
+          
+        if (data) {
+          setIsAdmin(true);
+        }
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+      }
+    };
+    
+    checkIfAdmin();
+  }, [isLoggedIn, currentUser]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -301,7 +345,7 @@ const Products = () => {
               ))}
             </div>
 
-            <div className="mb-8 flex justify-between items-center">
+            <div className="mb-8 flex justify-between items-center flex-wrap gap-4">
               <div className="flex items-center">
                 <span className="mr-2">Filter by:</span>
                 <div className="relative">
@@ -322,7 +366,17 @@ const Products = () => {
                   </div>
                 </div>
               </div>
-              <div className="flex space-x-4">
+              <div className="flex space-x-4 flex-wrap">
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    className="bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-300"
+                    onClick={handleGoToAdmin}
+                  >
+                    Admin Dashboard
+                  </Button>
+                )}
+                
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -452,6 +506,17 @@ const Products = () => {
             {loading ? (
               <div className="flex justify-center items-center py-12">
                 <div className="animate-spin h-10 w-10 border-4 border-kimcom-600 border-t-transparent rounded-full"></div>
+              </div>
+            ) : error ? (
+              <div className="text-center py-12">
+                <p className="text-red-500 text-lg mb-4">{error}</p>
+                <Button 
+                  variant="outline" 
+                  onClick={handleRefreshProducts}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Try Again
+                </Button>
               </div>
             ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
