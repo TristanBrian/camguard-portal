@@ -1,4 +1,5 @@
-import React from "react";
+
+import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import ServiceCard from "@/components/ServiceCard";
@@ -10,10 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Camera, Settings, Wifi, ShieldCheck, Server, Network, ArrowRight, Package } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { productsData } from '@/data/productsData';
+import { fetchProducts } from '@/integrations/supabase/admin';
+import { Product } from '@/data/productsData';
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Sample service data
   const services = [{
@@ -38,8 +43,54 @@ const Index = () => {
     icon: ShieldCheck
   }];
 
-  // Get featured products (first 4) from our shared products data
-  const featuredProducts = productsData.slice(0, 4);
+  // Load featured products from database
+  useEffect(() => {
+    const loadFeaturedProducts = async () => {
+      try {
+        setLoading(true);
+        console.log("Fetching featured products...");
+        
+        const products = await fetchProducts();
+        
+        if (products && products.length > 0) {
+          // Get first 4 products for featured section
+          const featured = products.slice(0, 4);
+          console.log(`Loaded ${featured.length} featured products`);
+          setFeaturedProducts(featured);
+        } else {
+          console.log("No products found for featured section");
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching featured products:", error);
+        setLoading(false);
+      }
+    };
+    
+    loadFeaturedProducts();
+    
+    // Set up real-time subscription for product changes
+    const channel = supabase
+      .channel('featured-products-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'products'
+        },
+        () => {
+          console.log('Products changed, refreshing featured products');
+          loadFeaturedProducts(); // Reload products when anything changes
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Sample testimonial data
   const testimonials = [{
@@ -90,7 +141,7 @@ const Index = () => {
       }];
       localStorage.setItem('cartItems', JSON.stringify(updatedCart));
     }
-    const product = productsData.find(p => p.id === id);
+    const product = featuredProducts.find(p => p.id === id);
     toast.success(`Added ${product?.name} to cart`);
   };
 
@@ -202,9 +253,38 @@ const Index = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {featuredProducts.map(product => <ProductCard key={product.id} id={product.id} name={product.name} description={product.description} price={product.price} image={product.image} category={product.category} difficulty={product.difficulty} stock={product.stock} onViewDetails={() => handleViewDetails(product.id)} onAddToCart={() => handleAddToCart(product.id)} />)}
-            </div>
+            {loading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin h-10 w-10 border-4 border-kimcom-600 border-t-transparent rounded-full"></div>
+              </div>
+            ) : featuredProducts.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500 text-lg mb-4">No products available at the moment.</p>
+                <Button variant="outline" onClick={() => navigate('/products')}>
+                  View All Products
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {featuredProducts.map(product => (
+                  <ProductCard 
+                    key={product.id} 
+                    id={product.id} 
+                    name={product.name} 
+                    description={product.description || ""} 
+                    price={product.price} 
+                    image={product.image || "/placeholder.svg"} 
+                    category={product.category} 
+                    difficulty={product.difficulty} 
+                    stock={product.stock}
+                    brand={product.brand || ""}
+                    model={product.model || ""}
+                    onViewDetails={() => handleViewDetails(product.id)} 
+                    onAddToCart={() => handleAddToCart(product.id)} 
+                  />
+                ))}
+              </div>
+            )}
 
             <div className="mt-16 text-center">
               <Button className="bg-kimcom-600 hover:bg-kimcom-700" size="lg" onClick={() => navigate('/products')}>

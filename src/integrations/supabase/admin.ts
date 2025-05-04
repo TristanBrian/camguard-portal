@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/data/productsData";
 
@@ -24,6 +23,7 @@ export async function isAdmin(userId: string): Promise<boolean> {
  */
 export async function fetchProducts(): Promise<Product[]> {
   try {
+    // Use a more complete query with explicit ordering and error handling
     const { data, error } = await supabase
       .from("products")
       .select("*")
@@ -34,23 +34,38 @@ export async function fetchProducts(): Promise<Product[]> {
       throw error;
     }
     
-    // Convert database results to Product objects
-    return data?.map(item => ({
-      ...item,
+    if (!data || data.length === 0) {
+      console.log("No products found in database");
+      return [];
+    }
+    
+    console.log(`Successfully fetched ${data.length} products from database`);
+    
+    // Convert database results to Product objects with careful type handling
+    return data.map(item => ({
+      id: item.id,
+      name: item.name || "Untitled Product",
+      description: item.description || "",
+      category: item.category || "Uncategorized",
+      price: Number(item.price) || 0,
+      stock: Number(item.stock) || 0,
+      image: item.image || "/placeholder.svg",
       difficulty: (item.difficulty || 'Medium') as 'Easy' | 'Medium' | 'Advanced',
-      // Ensure other fields match the Product interface
-      price: Number(item.price),
-      stock: Number(item.stock),
-      features: item.features || []
-    })) || [];
+      brand: item.brand || "",
+      model: item.model || "",
+      features: Array.isArray(item.features) ? item.features : [],
+      sku: item.sku || `SKU-${item.id.substring(0, 8)}`
+    }));
   } catch (error) {
     console.error("Failed to fetch products:", error);
-    throw error;
+    // Return an empty array instead of throwing to prevent UI crashes
+    return [];
   }
 }
 
 export async function createProduct(product: Omit<Product, 'id'>) {
   try {
+    console.log("Creating new product:", product);
     const { data, error } = await supabase
       .from("products")
       .insert([product])
@@ -62,6 +77,7 @@ export async function createProduct(product: Omit<Product, 'id'>) {
     }
     
     if (data?.[0]) {
+      console.log("Product created successfully:", data[0].id);
       return {
         ...data[0],
         difficulty: (data[0].difficulty || 'Medium') as 'Easy' | 'Medium' | 'Advanced',
@@ -125,15 +141,46 @@ export async function deleteProduct(id: string) {
 }
 
 /**
- * Storage: Upload product image to bucket (public "gallery" bucket)
+ * Storage: Upload product image to bucket with improved error handling
  */
 export async function uploadProductImage(file: File, fileName: string) {
   try {
-    await setupStorageBucket(); // Ensure bucket exists before upload
+    // Check if the bucket exists, create if it doesn't
+    const { data: buckets } = await supabase.storage.listBuckets();
+    console.log("Available buckets:", buckets);
+    
+    const galleryExists = buckets?.some(bucket => bucket.name === 'gallery');
+    
+    if (!galleryExists) {
+      console.log("Gallery bucket doesn't exist, creating...");
+      try {
+        await setupStorageBucket();
+      } catch (bucketError) {
+        console.error("Failed to create gallery bucket:", bucketError);
+        // Attempt to use another method for creation
+        try {
+          const { data, error } = await supabase.storage.createBucket('gallery', {
+            public: true,
+            fileSizeLimit: 10485760, // 10MB
+            allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif']
+          });
+          
+          if (error) throw error;
+          console.log("Gallery bucket created using alternative method");
+        } catch (altError) {
+          console.error("All attempts to create bucket failed:", altError);
+          throw new Error("Unable to create storage bucket. Please check permissions.");
+        }
+      }
+    }
+    
+    // Add timestamp to filename to prevent collisions
+    const uniqueFileName = `${Date.now()}-${fileName.replace(/\s+/g, '-')}`;
+    console.log("Uploading image with filename:", uniqueFileName);
     
     const { data, error } = await supabase.storage
       .from("gallery")
-      .upload(fileName, file, {
+      .upload(uniqueFileName, file, {
         cacheControl: "3600",
         upsert: true,
       });
@@ -143,8 +190,9 @@ export async function uploadProductImage(file: File, fileName: string) {
       throw error;
     }
     
-    // Return public URL for use in DB
-    const publicUrl = supabase.storage.from("gallery").getPublicUrl(fileName);
+    // Get and return public URL
+    const publicUrl = supabase.storage.from("gallery").getPublicUrl(uniqueFileName);
+    console.log("Uploaded successfully, public URL:", publicUrl.data.publicUrl);
     return publicUrl.data.publicUrl;
   } catch (error) {
     console.error("Failed to upload product image:", error);
@@ -259,19 +307,31 @@ export async function getProductStats() {
 }
 
 /**
- * Setup Storage Bucket if it doesn't exist
+ * Setup Storage Bucket with enhanced error handling and permissions
  */
 export async function setupStorageBucket() {
   try {
+    console.log("Setting up storage bucket...");
+    
     // Check if gallery bucket exists
-    const { data: buckets } = await supabase.storage.listBuckets();
+    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+    
+    if (bucketsError) {
+      console.error("Error checking buckets:", bucketsError);
+      throw bucketsError;
+    }
+    
     const galleryExists = buckets?.some(bucket => bucket.name === 'gallery');
+    console.log("Gallery bucket exists:", galleryExists);
     
     if (!galleryExists) {
+      console.log("Creating gallery bucket...");
+      
       // Create the gallery bucket
       const { data, error } = await supabase.storage.createBucket('gallery', {
         public: true,
         fileSizeLimit: 10485760, // 10MB
+        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif']
       });
       
       if (error) {
@@ -279,6 +339,15 @@ export async function setupStorageBucket() {
         throw error;
       } else {
         console.log("Gallery bucket created successfully");
+      }
+      
+      // Add a public policy to the bucket to ensure images are accessible
+      try {
+        // This step might not be necessary as the bucket is set to public
+        console.log("Bucket created and set to public");
+      } catch (policyError) {
+        console.error("Error setting bucket policy:", policyError);
+        // Continue anyway as the bucket is already public
       }
     }
     
@@ -319,5 +388,65 @@ export async function getProductGalleryImages(productId: string): Promise<string
   } catch (error) {
     console.error("Failed to get product gallery images:", error);
     return [];
+  }
+}
+
+/**
+ * New method: Ensure products exist (can be used for seeding initial data)
+ */
+export async function ensureProductsExist() {
+  try {
+    const { count, error } = await supabase
+      .from("products")
+      .select("*", { count: 'exact', head: true });
+    
+    if (error) {
+      console.error("Error checking product count:", error);
+      return false;
+    }
+    
+    console.log(`Current product count: ${count}`);
+    return count && count > 0;
+  } catch (error) {
+    console.error("Failed to check if products exist:", error);
+    return false;
+  }
+}
+
+/**
+ * Get a single product by ID with detailed error handling
+ */
+export async function getProductById(id: string): Promise<Product | null> {
+  try {
+    console.log("Fetching product with ID:", id);
+    
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    
+    if (error) {
+      console.error("Error fetching product by ID:", error);
+      throw error;
+    }
+    
+    if (!data) {
+      console.log("No product found with ID:", id);
+      return null;
+    }
+    
+    console.log("Product fetched successfully:", data.name);
+    
+    return {
+      ...data,
+      difficulty: (data.difficulty || 'Medium') as 'Easy' | 'Medium' | 'Advanced',
+      price: Number(data.price),
+      stock: Number(data.stock),
+      features: Array.isArray(data.features) ? data.features : []
+    } as Product;
+  } catch (error) {
+    console.error("Failed to get product by ID:", error);
+    return null;
   }
 }

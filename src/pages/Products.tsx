@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -27,7 +26,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { supabase } from '@/integrations/supabase/client';
-import { fetchProducts } from '@/integrations/supabase/admin';
+import { fetchProducts, ensureProductsExist } from '@/integrations/supabase/admin';
 
 const Products = () => {
   const navigate = useNavigate();
@@ -42,6 +41,7 @@ const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   
   // Enhanced fetch products function with better error handling
   useEffect(() => {
@@ -51,14 +51,21 @@ const Products = () => {
         setError(null);
         console.log("Fetching products...");
         
+        // Check if products exist, if not log helpful message
+        const hasProducts = await ensureProductsExist();
+        if (!hasProducts) {
+          console.log("No products found in database. This could be normal for a new setup.");
+        }
+        
         const dbProducts = await fetchProducts();
         
         if (dbProducts && dbProducts.length > 0) {
           console.log(`Successfully loaded ${dbProducts.length} products`);
           setProducts(dbProducts);
+          toast.success(`Loaded ${dbProducts.length} products`);
         } else {
           console.log("No products found in the database");
-          toast.warning("No products found. Please check back later.");
+          toast.warning("No products found. You may need to add some products in the admin dashboard.");
         }
         setLoading(false);
       } catch (error) {
@@ -91,7 +98,7 @@ const Products = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [retryCount]); // Added retryCount to trigger refresh
   
   // Check user login status and load cart items
   useEffect(() => {
@@ -271,12 +278,10 @@ const Products = () => {
     try {
       setLoading(true);
       setError(null);
-      const dbProducts = await fetchProducts();
-      setProducts(dbProducts);
-      setLoading(false);
-      toast.success("Products refreshed successfully");
+      setRetryCount(prev => prev + 1); // Increment retry count to trigger useEffect
+      toast.success("Refreshing products...");
     } catch (error) {
-      console.error("Error fetching products:", error);
+      console.error("Error refreshing products:", error);
       setError("Failed to refresh products. Please try again.");
       toast.error("Failed to refresh products");
       setLoading(false);
@@ -304,6 +309,7 @@ const Products = () => {
           
         if (data) {
           setIsAdmin(true);
+          console.log("User is admin");
         }
       } catch (error) {
         console.error("Error checking admin status:", error);
@@ -520,17 +526,31 @@ const Products = () => {
               </div>
             ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">No products found matching your search.</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={() => {
-                    setSearchTerm('');
-                    setSelectedCategory('All');
-                  }}
-                >
-                  Clear filters
-                </Button>
+                <p className="text-gray-500 text-lg mb-4">
+                  {products.length === 0 
+                    ? "No products found in the database. Please add some products in the admin dashboard." 
+                    : "No products found matching your search."}
+                </p>
+                {products.length === 0 && isAdmin && (
+                  <Button 
+                    className="bg-kimcom-600 hover:bg-kimcom-700 mt-2"
+                    onClick={handleGoToAdmin}
+                  >
+                    Go to Admin Dashboard
+                  </Button>
+                )}
+                {products.length > 0 && (
+                  <Button 
+                    variant="outline" 
+                    className="mt-4"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setSelectedCategory('All');
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">

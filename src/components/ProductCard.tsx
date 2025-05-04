@@ -106,7 +106,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         )}
       </div>
       <div className="p-4 flex-grow flex flex-col">
-        <h3 className="text-lg font-semibold text-gray-900 truncate">{name}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 truncate" title={name}>{name}</h3>
         
         {(brand || model) && (
           <div className="mt-1 flex flex-wrap gap-1">
@@ -123,14 +123,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
         )}
         
-        <p className="text-gray-600 text-sm mt-2 line-clamp-2">{description}</p>
+        <p className="text-gray-600 text-sm mt-2 line-clamp-2" title={description}>{description}</p>
         
         <div className="mt-auto pt-4 flex justify-between items-center">
           <div className="text-xl font-bold text-kimcom-700">KSh {price.toLocaleString()}</div>
           <div className="flex space-x-2">
             <Button 
               variant="ghost" 
-              size="sm" 
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation();
                 if (onViewDetails) onViewDetails();
@@ -141,7 +141,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </Button>
             <Button 
               variant="default" 
-              size="sm" 
+              size="sm"
               onClick={handleAddToCart}
               className="bg-kimcom-600 hover:bg-kimcom-700"
               disabled={isOutOfStock}
