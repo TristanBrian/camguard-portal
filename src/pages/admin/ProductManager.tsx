@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,7 +81,7 @@ const ProductManager: React.FC = () => {
     
     checkAdminStatus();
     
-    // Setup storage bucket if needed - this now has improved error handling
+    // Setup storage bucket if needed
     setupStorageBucket().then(success => {
       if (success) {
         console.log("Storage bucket setup completed successfully");
@@ -144,6 +145,14 @@ const ProductManager: React.FC = () => {
         setRefreshing(false);
         return;
       }
+      
+      // Try to login as admin to ensure we have proper permissions
+      await ensureAdminAuth().catch(err => {
+        console.error("Admin auth check failed:", err);
+        toast.error("Administrator authentication failed. Please login again.");
+        setTimeout(() => navigate('/admin-login'), 1500);
+        throw new Error("Admin authentication required");
+      });
       
       let imageUrl = undefined;
       if (productData.image instanceof File) {
@@ -210,10 +219,12 @@ const ProductManager: React.FC = () => {
         } else {
           toast.error("Failed to create product - no data returned");
         }
-      } catch (createError) {
+      } catch (createError: any) {
         console.error("Error creating product:", createError);
         
-        if (createError.message?.includes('authentication') || createError.message?.includes('admin')) {
+        if (createError.message?.includes('authentication') || 
+            createError.message?.includes('admin') || 
+            createError.message?.includes('Invalid API key')) {
           toast.error("Admin authentication required. Please log in again.");
           // Redirect to admin login after a short delay
           setTimeout(() => navigate('/admin-login'), 2000);
@@ -222,7 +233,7 @@ const ProductManager: React.FC = () => {
         }
       }
       
-    } catch (e) {
+    } catch (e: any) {
       console.error("Error adding product:", e);
       toast.error("Failed to add product: " + (e instanceof Error ? e.message : String(e)));
     } finally {

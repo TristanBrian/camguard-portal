@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -6,7 +7,18 @@ const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 
 // Create a special admin client that can bypass RLS
 // WARNING: This should only be used on the admin pages with proper authentication checks
-export const adminClient = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+export const adminClient = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'supabase-js-admin',
+      'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+    },
+  },
+});
 
 // Function to ensure a user is admin before using admin functions
 export const ensureAdminAuth = async () => {
@@ -50,8 +62,6 @@ export const createStorageBucket = async (bucketName: string, isPublic = true) =
     const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
     
     if (!bucketExists) {
-      // Fix: Use custom function call instead of RPC
-      // This avoids the TypeScript error with the RPC parameter
       try {
         const { error } = await adminClient.storage.createBucket(bucketName, {
           public: isPublic

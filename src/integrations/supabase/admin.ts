@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { adminClient, ensureAdminAuth, createStorageBucket } from "@/integrations/supabase/adminClient";
 import type { Product } from "@/data/productsData";
@@ -107,28 +108,33 @@ export async function createProduct(product: Omit<Product, 'id'>) {
       features: Array.isArray(product.features) ? product.features : []
     };
     
-    // Use admin client to bypass RLS
-    const { data, error } = await adminClient
-      .from("products")
-      .insert([productToInsert])
-      .select("*");
-    
-    if (error) {
-      console.error("Error creating product:", error);
-      throw error;
+    try {
+      // Use admin client to bypass RLS with explicit auth headers
+      const { data, error } = await adminClient
+        .from("products")
+        .insert([productToInsert])
+        .select("*");
+      
+      if (error) {
+        console.error("Error creating product:", error);
+        throw error;
+      }
+      
+      if (data?.[0]) {
+        console.log("Product created successfully:", data[0].id);
+        return {
+          ...data[0],
+          difficulty: (data[0].difficulty || 'Medium') as 'Easy' | 'Medium' | 'Advanced',
+          price: Number(data[0].price),
+          stock: Number(data[0].stock),
+          features: data[0].features || []
+        } as Product;
+      }
+      return null;
+    } catch (dbError) {
+      console.error("Failed to create product in database:", dbError);
+      throw dbError;
     }
-    
-    if (data?.[0]) {
-      console.log("Product created successfully:", data[0].id);
-      return {
-        ...data[0],
-        difficulty: (data[0].difficulty || 'Medium') as 'Easy' | 'Medium' | 'Advanced',
-        price: Number(data[0].price),
-        stock: Number(data[0].stock),
-        features: data[0].features || []
-      } as Product;
-    }
-    return null;
   } catch (error) {
     console.error("Failed to create product:", error);
     throw error;
@@ -214,23 +220,28 @@ export async function uploadProductImage(file: File, fileName: string): Promise<
       console.warn("Couldn't ensure gallery bucket exists, but will try upload anyway");
     }
     
-    // Attempt upload with better error handling using admin client
-    const { data, error } = await adminClient.storage
-      .from("gallery")
-      .upload(sanitizedFileName, file, {
-        cacheControl: "3600",
-        upsert: true,
-      });
+    // Attempt upload with better error handling using admin client with explicit auth
+    try {
+      const { data, error } = await adminClient.storage
+        .from("gallery")
+        .upload(sanitizedFileName, file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
+        
+      if (error) {
+        console.error("Error uploading image:", error);
+        return "/placeholder.svg";
+      }
       
-    if (error) {
-      console.error("Error uploading image:", error);
+      // Get and return public URL
+      const publicUrl = adminClient.storage.from("gallery").getPublicUrl(sanitizedFileName);
+      console.log("Uploaded successfully, public URL:", publicUrl.data.publicUrl);
+      return publicUrl.data.publicUrl;
+    } catch (uploadError) {
+      console.error("Upload operation failed:", uploadError);
       return "/placeholder.svg";
     }
-    
-    // Get and return public URL
-    const publicUrl = adminClient.storage.from("gallery").getPublicUrl(sanitizedFileName);
-    console.log("Uploaded successfully, public URL:", publicUrl.data.publicUrl);
-    return publicUrl.data.publicUrl;
   } catch (error) {
     console.error("Failed to upload product image:", error);
     // Return a placeholder image instead of throwing to prevent UI crashes
