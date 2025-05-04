@@ -120,14 +120,36 @@ const ProductManager: React.FC = () => {
       } else if (productData.imageUrl) {
         imageUrl = productData.imageUrl;
       }
+      
+      // Process gallery images if they exist
+      let galleryImageUrls: string[] = [];
+      if (productData.galleryImages && productData.galleryImages.length > 0) {
+        const galleryFiles = Array.from(productData.galleryImages);
+        const uploadPromises = galleryFiles.map((file: File) => {
+          const fileName = `gallery-${Date.now()}-${file.name}`;
+          return uploadProductImage(file, fileName);
+        });
+        galleryImageUrls = await Promise.all(uploadPromises);
+      }
+      
+      // Process features text input and combine with gallery URLs
+      let features = [];
+      if (productData.features) {
+        features = productData.features.split('\n').filter((f: string) => f.trim());
+      }
+      
+      // Combine text features with gallery image URLs
+      const combinedFeatures = [...features, ...galleryImageUrls];
+      
       const payload = {
         ...productData,
         price: Number(productData.price),
         stock: Number(productData.stock),
         image: imageUrl || "/placeholder.svg",
         difficulty: productData.difficulty || "Medium",
-        features: productData.features ? productData.features.split('\n').filter((f: string) => f.trim()) : undefined,
+        features: combinedFeatures.length > 0 ? combinedFeatures : undefined,
       };
+      
       await createProduct(payload);
       toast.success("Product added successfully");
       setActiveTab("all");
@@ -148,13 +170,40 @@ const ProductManager: React.FC = () => {
       } else if (productData.imageUrl) {
         imageUrl = productData.imageUrl;
       }
+      
+      // Process gallery images if they exist
+      let galleryImageUrls: string[] = [];
+      if (productData.galleryImages && productData.galleryImages.length > 0) {
+        const galleryFiles = Array.from(productData.galleryImages);
+        const uploadPromises = galleryFiles.map((file: File) => {
+          const fileName = `gallery-${editingProduct.id}-${Date.now()}-${file.name}`;
+          return uploadProductImage(file, fileName);
+        });
+        galleryImageUrls = await Promise.all(uploadPromises);
+      }
+      
+      // Process features text input and combine with existing image URLs
+      let features = [];
+      if (productData.features) {
+        features = productData.features.split('\n').filter((f: string) => f.trim());
+      }
+      
+      // Extract existing gallery images to preserve them
+      const existingGalleryImages = Array.isArray(editingProduct.features) 
+        ? editingProduct.features.filter(f => typeof f === 'string' && (f.startsWith('http') || f.startsWith('/')))
+        : [];
+      
+      // Combine text features with both existing and new gallery image URLs
+      const combinedFeatures = [...features, ...existingGalleryImages, ...galleryImageUrls];
+      
       const payload = {
         ...productData,
         price: Number(productData.price),
         stock: Number(productData.stock),
         image: imageUrl,
-        features: productData.features ? productData.features.split('\n').filter((f: string) => f.trim()) : editingProduct.features,
+        features: combinedFeatures.length > 0 ? combinedFeatures : undefined,
       };
+      
       await updateProduct(editingProduct.id, payload);
       setEditingProduct(null);
       setActiveTab("all");

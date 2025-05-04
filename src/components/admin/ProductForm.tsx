@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -9,9 +9,16 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Package, Upload, X, Link as LinkIcon } from 'lucide-react';
+import { Package, Upload, X, Link as LinkIcon, Image, Images } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 const productFormSchema = z.object({
   name: z.string().min(2, {
@@ -42,7 +49,7 @@ const productFormSchema = z.object({
 type ProductFormValues = z.infer<typeof productFormSchema>;
 
 interface ProductFormProps {
-  onSubmit: (data: ProductFormValues & { image?: File, imageUrl?: string }) => void;
+  onSubmit: (data: ProductFormValues & { image?: File, imageUrl?: string, galleryImages?: File[] }) => void;
   initialData?: ProductFormValues & { image?: string, imageUrl?: string };
   isEditing?: boolean;
 }
@@ -57,6 +64,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [imageSource, setImageSource] = useState<'file' | 'url'>(initialData?.imageUrl ? 'url' : 'file');
   const [imageUrl, setImageUrl] = useState(initialData?.imageUrl || '');
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -86,6 +95,33 @@ const ProductForm: React.FC<ProductFormProps> = ({
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleGalleryImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const fileArray = Array.from(files);
+      setGalleryFiles(prev => [...prev, ...fileArray]);
+      
+      const newPreviewPromises = fileArray.map(file => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            resolve(event.target?.result as string);
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+      
+      Promise.all(newPreviewPromises).then(newPreviews => {
+        setGalleryPreviews(prev => [...prev, ...newPreviews]);
+      });
+    }
+  };
+
+  const removeGalleryImage = (index: number) => {
+    setGalleryFiles(prev => prev.filter((_, i) => i !== index));
+    setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,6 +157,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
       ...data,
       image: imageFile || undefined,
       imageUrl: imageSource === 'url' ? imageUrl : undefined,
+      galleryImages: galleryFiles.length > 0 ? galleryFiles : undefined,
       difficulty: data.difficulty || "Medium",
     };
     
@@ -130,6 +167,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
       if (!isEditing) {
         form.reset();
         clearImage();
+        setGalleryFiles([]);
+        setGalleryPreviews([]);
       }
     }, 500);
   };
@@ -317,7 +356,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
               
               <div className="w-full md:w-1/2 flex flex-col gap-4">
                 <div>
-                  <FormLabel>Product Image</FormLabel>
+                  <FormLabel>Main Product Image</FormLabel>
                   
                   <RadioGroup 
                     className="flex space-x-4 mb-4" 
@@ -400,6 +439,67 @@ const ProductForm: React.FC<ProductFormProps> = ({
                     )}
                   </div>
                 </div>
+
+                <div className="mt-6">
+                  <FormLabel className="flex items-center gap-2">
+                    <Images className="h-4 w-4" />
+                    Product Gallery Images
+                  </FormLabel>
+                  
+                  <div className="border-2 border-dashed rounded-lg p-4 mt-2">
+                    <div className="flex justify-center mb-4">
+                      <label htmlFor="gallery-upload" className="cursor-pointer">
+                        <Button type="button" variant="outline" size="sm">
+                          <Image className="h-4 w-4 mr-2" />
+                          Add Gallery Images
+                        </Button>
+                        <input
+                          id="gallery-upload"
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={handleGalleryImagesChange}
+                        />
+                      </label>
+                    </div>
+
+                    {galleryPreviews.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-sm font-medium mb-2">Gallery Preview ({galleryPreviews.length} images)</p>
+                        
+                        <Carousel className="w-full">
+                          <CarouselContent>
+                            {galleryPreviews.map((preview, index) => (
+                              <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
+                                <div className="relative p-1">
+                                  <div className="aspect-square overflow-hidden rounded-md">
+                                    <img 
+                                      src={preview} 
+                                      alt={`Gallery image ${index + 1}`}
+                                      className="h-full w-full object-cover" 
+                                    />
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute top-2 right-2 h-6 w-6 bg-white rounded-full border shadow-sm"
+                                    onClick={() => removeGalleryImage(index)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </CarouselItem>
+                            ))}
+                          </CarouselContent>
+                          <CarouselPrevious className="-left-3 h-7 w-7" />
+                          <CarouselNext className="-right-3 h-7 w-7" />
+                        </Carousel>
+                      </div>
+                    )}
+                  </div>
+                </div>
                 
                 <div className="bg-gray-50 p-4 rounded-lg border">
                   <h3 className="text-sm font-medium mb-2">Product Preview</h3>
@@ -430,6 +530,11 @@ const ProductForm: React.FC<ProductFormProps> = ({
                       <p className="text-sm font-medium text-kimcom-600">
                         KSh {form.watch("price") || "0.00"}
                       </p>
+                      {galleryPreviews.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          +{galleryPreviews.length} gallery images
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
