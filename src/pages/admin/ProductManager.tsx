@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -456,7 +457,7 @@ const ProductManager: React.FC = () => {
                                     ))}
                                   </div>
                                   <Button
-                                    size="xs"
+                                    size="sm"
                                     className="mt-1 bg-kimcom-600 text-white"
                                     onClick={() => handleGalleryUpload(product)}
                                     disabled={galleryUploadLoading}
@@ -580,7 +581,11 @@ const ProductManager: React.FC = () => {
                 image: editingProduct.image,
                 brand: editingProduct.brand || '',
                 model: editingProduct.model || '',
-                features: editingProduct.features ? editingProduct.features.split('\n').filter((f: string) => f.trim()) : '',
+                features: Array.isArray(editingProduct.features) 
+                  ? editingProduct.features
+                      .filter(f => typeof f === 'string' && !f.startsWith('http'))
+                      .join('\n')
+                  : '',
                 difficulty: editingProduct.difficulty || 'Medium',
               }}
               isEditing={true}
