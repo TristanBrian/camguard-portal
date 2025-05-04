@@ -1,1 +1,29 @@
+
+# A string used to distinguish different Supabase projects on the same host. Defaults to the project ID.
 project_id = "lcqrwhnpscchimjqysau"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+
+[db]
+port = 54322
+
+[studio]
+port = 54323
+
+[inbucket]
+port = 54324
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+
+[functions]
+[functions.create-bucket]
+verify_jwt = true

@@ -416,19 +416,23 @@ const ProductForm: React.FC<ProductFormProps> = ({
                         <p className="text-xs text-gray-400">PNG, JPG or WEBP (max. 2MB)</p>
                         
                         <div className="mt-4 flex justify-center">
-                          <label htmlFor="file-upload" className="cursor-pointer">
-                            <Button type="button" variant="outline" size="sm">
-                              <Upload className="h-4 w-4 mr-2" />
-                              Select File
-                            </Button>
-                            <input
-                              id="file-upload"
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={handleImageChange}
-                            />
-                          </label>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => document.getElementById('file-upload')?.click()}
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Select File
+                          </Button>
+                          <input
+                            id="file-upload"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleImageChange}
+                            onClick={(e) => e.stopPropagation()}
+                          />
                         </div>
                       </div>
                     ) : (
@@ -448,20 +452,24 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   
                   <div className="border-2 border-dashed rounded-lg p-4 mt-2">
                     <div className="flex justify-center mb-4">
-                      <label htmlFor="gallery-upload" className="cursor-pointer">
-                        <Button type="button" variant="outline" size="sm">
-                          <Image className="h-4 w-4 mr-2" />
-                          Add Gallery Images
-                        </Button>
-                        <input
-                          id="gallery-upload"
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          className="hidden"
-                          onChange={handleGalleryImagesChange}
-                        />
-                      </label>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => document.getElementById('gallery-upload')?.click()}
+                      >
+                        <Image className="h-4 w-4 mr-2" />
+                        Add Gallery Images
+                      </Button>
+                      <input
+                        id="gallery-upload"
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={handleGalleryImagesChange}
+                        onClick={(e) => e.stopPropagation()}
+                      />
                     </div>
 
                     {galleryPreviews.length > 0 && (

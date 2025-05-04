@@ -150,6 +150,9 @@ export async function uploadProductImage(file: File, fileName: string) {
   try {
     console.log("Uploading image with filename:", fileName);
     
+    // Create the storage bucket if it doesn't exist
+    await setupStorageBucket();
+    
     const { data, error } = await supabase.storage
       .from("gallery")
       .upload(fileName, file, {
@@ -177,8 +180,11 @@ export async function uploadProductImage(file: File, fileName: string) {
  */
 export async function uploadGalleryImages(files: File[], productId: string) {
   try {
+    // Create the storage bucket if it doesn't exist
+    await setupStorageBucket();
+    
     const uploadPromises = files.map(async (file, index) => {
-      const fileName = `product-${productId}-gallery-${index}-${Date.now()}-${file.name}`;
+      const fileName = `product-${productId}-gallery-${index}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '')}`;
       return uploadProductImage(file, fileName);
     });
     
@@ -334,11 +340,10 @@ export async function setupStorageBucket() {
     if (!galleryExists) {
       console.log("Creating gallery bucket...");
       
-      // Create the gallery bucket
-      const { data, error } = await supabase.storage.createBucket('gallery', {
-        public: true,
-        fileSizeLimit: 10485760, // 10MB
-        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp']
+      // Using admin function route instead of direct creation
+      // This is safer than direct creation that might fail due to RLS
+      const { error } = await supabase.functions.invoke('create-bucket', {
+        body: { bucketName: 'gallery' }
       });
       
       if (error) {
@@ -446,5 +451,106 @@ export async function getProductById(id: string): Promise<Product | null> {
   } catch (error) {
     console.error("Failed to get product by ID:", error);
     return null;
+  }
+}
+
+/**
+ * Statistics: Get product stats with enhanced analytics
+ */
+export async function getProductStats() {
+  try {
+    const { data, error } = await supabase
+      .from("products")
+      .select("category, price, stock, brand, model, difficulty");
+    
+    if (error) {
+      console.error("Error fetching product stats:", error);
+      throw error;
+    }
+    
+    // Calculate stats
+    const stats = {
+      totalProducts: data?.length || 0,
+      totalValue: data?.reduce((sum, item) => sum + Number(item.price) * Number(item.stock), 0) || 0,
+      totalStock: data?.reduce((sum, item) => sum + Number(item.stock), 0) || 0,
+      categoryCounts: {} as Record<string, number>,
+      categoryValue: {} as Record<string, number>,
+      brandCounts: {} as Record<string, number>,
+      lowStockCount: 0,
+      outOfStockCount: 0,
+      difficultyBreakdown: {
+        Easy: 0,
+        Medium: 0,
+        Advanced: 0
+      },
+      lowStockItems: [] as any[],
+      outOfStockItems: [] as any[]
+    };
+    
+    // Process items
+    if (data) {
+      data.forEach(item => {
+        // Process categories
+        const category = item.category || 'Uncategorized';
+        if (!stats.categoryCounts[category]) {
+          stats.categoryCounts[category] = 0;
+          stats.categoryValue[category] = 0;
+        }
+        stats.categoryCounts[category]++;
+        stats.categoryValue[category] += Number(item.price) * Number(item.stock);
+        
+        // Process brands
+        if (item.brand) {
+          if (!stats.brandCounts[item.brand]) {
+            stats.brandCounts[item.brand] = 0;
+          }
+          stats.brandCounts[item.brand]++;
+        }
+        
+        // Process difficulty
+        if (item.difficulty && ['Easy', 'Medium', 'Advanced'].includes(item.difficulty)) {
+          stats.difficultyBreakdown[item.difficulty as keyof typeof stats.difficultyBreakdown]++;
+        } else {
+          stats.difficultyBreakdown.Medium++;
+        }
+        
+        // Count low/out of stock items
+        const stock = Number(item.stock);
+        if (stock === 0) {
+          stats.outOfStockCount++;
+          stats.outOfStockItems.push(item);
+        } else if (stock <= 5) {
+          stats.lowStockCount++;
+          stats.lowStockItems.push(item);
+        }
+      });
+    }
+    
+    return stats;
+  } catch (error) {
+    console.error("Failed to get product stats:", error);
+    throw error;
+  }
+}
+
+/**
+ * New method: Ensure products exist (can be used for seeding initial data)
+ */
+export async function ensureProductsExist() {
+  try {
+    const { count, error } = await supabase
+      .from("products")
+      .select("*", { count: 'exact', head: true });
+    
+    if (error) {
+      console.error("Error checking product count:", error);
+      return false;
+    }
+    
+    console.log(`Current product count: ${count}`);
+    return count && count > 0;
+  } catch (error) {
+    console.error("Failed to check if products exist:", error);
+    return false;
   }
 }
