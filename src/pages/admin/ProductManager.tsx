@@ -74,7 +74,9 @@ const ProductManager: React.FC = () => {
     
     try {
       setRefreshing(true);
+      console.log("Fetching all products");
       const fetchedProducts = await fetchProducts();
+      console.log(`Fetched ${fetchedProducts.length} products:`, fetchedProducts);
       setProducts(fetchedProducts);
       setRefreshing(false);
     } catch (err) {
@@ -99,8 +101,8 @@ const ProductManager: React.FC = () => {
           table: 'products'
         },
         (payload) => {
-          console.log('Product changed:', payload);
-          fetchAllProducts();
+          console.log('Product changed in database:', payload);
+          fetchAllProducts(); // Reload when anything changes
         }
       )
       .subscribe();
@@ -113,10 +115,15 @@ const ProductManager: React.FC = () => {
 
   const handleAddProduct = async (productData: any) => {
     try {
+      console.log("Adding new product with data:", productData);
+      setRefreshing(true);
+      
       let imageUrl = undefined;
       if (productData.image instanceof File) {
-        const fileName = `product-${Date.now()}-${productData.image.name}`;
+        const fileName = `product-${Date.now()}-${productData.image.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        console.log(`Uploading image with filename: ${fileName}`);
         imageUrl = await uploadProductImage(productData.image, fileName);
+        console.log(`Image uploaded successfully, URL: ${imageUrl}`);
       } else if (productData.imageUrl) {
         imageUrl = productData.imageUrl;
       }
@@ -125,16 +132,20 @@ const ProductManager: React.FC = () => {
       let galleryImageUrls: string[] = [];
       if (productData.galleryImages && productData.galleryImages.length > 0) {
         const galleryFiles = Array.from(productData.galleryImages);
+        console.log(`Uploading ${galleryFiles.length} gallery images`);
+        
         const uploadPromises = galleryFiles.map((file: File) => {
-          const fileName = `gallery-${Date.now()}-${file.name}`;
+          const fileName = `gallery-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
           return uploadProductImage(file, fileName);
         });
+        
         galleryImageUrls = await Promise.all(uploadPromises);
+        console.log(`Gallery images uploaded successfully:`, galleryImageUrls);
       }
       
       // Process features text input and combine with gallery URLs
-      let features = [];
-      if (productData.features) {
+      let features: string[] = [];
+      if (productData.features && typeof productData.features === 'string') {
         features = productData.features.split('\n').filter((f: string) => f.trim());
       }
       
@@ -142,21 +153,35 @@ const ProductManager: React.FC = () => {
       const combinedFeatures = [...features, ...galleryImageUrls];
       
       const payload = {
-        ...productData,
+        name: productData.name,
         price: Number(productData.price),
         stock: Number(productData.stock),
         image: imageUrl || "/placeholder.svg",
         difficulty: productData.difficulty || "Medium",
+        category: productData.category,
+        description: productData.description,
+        sku: productData.sku,
+        brand: productData.brand,
+        model: productData.model,
         features: combinedFeatures.length > 0 ? combinedFeatures : undefined,
       };
       
-      await createProduct(payload);
-      toast.success("Product added successfully");
-      setActiveTab("all");
-      fetchAllProducts();
+      console.log("Creating product with payload:", payload);
+      const createdProduct = await createProduct(payload);
+      
+      if (createdProduct) {
+        toast.success("Product added successfully");
+        setActiveTab("all");
+        fetchAllProducts();
+      } else {
+        toast.error("Failed to create product - no data returned");
+      }
+      
     } catch (e) {
       console.error("Error adding product:", e);
-      toast.error("Failed to add product");
+      toast.error("Failed to add product: " + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -165,7 +190,7 @@ const ProductManager: React.FC = () => {
     try {
       let imageUrl = editingProduct.image;
       if (productData.image instanceof File) {
-        const fileName = `product-${editingProduct.id}-${Date.now()}-${productData.image.name}`;
+        const fileName = `product-${editingProduct.id}-${Date.now()}-${productData.image.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
         imageUrl = await uploadProductImage(productData.image, fileName);
       } else if (productData.imageUrl) {
         imageUrl = productData.imageUrl;
@@ -175,16 +200,20 @@ const ProductManager: React.FC = () => {
       let galleryImageUrls: string[] = [];
       if (productData.galleryImages && productData.galleryImages.length > 0) {
         const galleryFiles = Array.from(productData.galleryImages);
+        console.log(`Uploading ${galleryFiles.length} gallery images`);
+        
         const uploadPromises = galleryFiles.map((file: File) => {
-          const fileName = `gallery-${editingProduct.id}-${Date.now()}-${file.name}`;
+          const fileName = `gallery-${editingProduct.id}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
           return uploadProductImage(file, fileName);
         });
+        
         galleryImageUrls = await Promise.all(uploadPromises);
+        console.log(`Gallery images uploaded successfully:`, galleryImageUrls);
       }
       
       // Process features text input and combine with existing image URLs
-      let features = [];
-      if (productData.features) {
+      let features: string[] = [];
+      if (productData.features && typeof productData.features === 'string') {
         features = productData.features.split('\n').filter((f: string) => f.trim());
       }
       

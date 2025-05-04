@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/data/productsData";
 
@@ -69,9 +68,26 @@ export async function fetchProducts(): Promise<Product[]> {
 export async function createProduct(product: Omit<Product, 'id'>) {
   try {
     console.log("Creating new product:", product);
+    
+    // Clean up the product object before insertion
+    // Remove any properties that don't exist in the database table
+    const productToInsert = {
+      name: product.name,
+      description: product.description,
+      category: product.category || 'Uncategorized',
+      price: Number(product.price) || 0,
+      stock: Number(product.stock) || 0,
+      image: product.image || '/placeholder.svg',
+      sku: product.sku,
+      difficulty: product.difficulty || 'Medium',
+      brand: product.brand,
+      model: product.model,
+      features: Array.isArray(product.features) ? product.features : []
+    };
+    
     const { data, error } = await supabase
       .from("products")
-      .insert([product])
+      .insert([productToInsert])
       .select("*");
     
     if (error) {
@@ -270,7 +286,7 @@ export async function setupStorageBucket() {
   try {
     console.log("Setting up storage bucket...");
     
-    // Check if gallery bucket exists
+    // First check if the gallery bucket exists
     const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
     
     if (bucketsError) {
@@ -278,34 +294,40 @@ export async function setupStorageBucket() {
       return false;
     }
     
+    // Using optional chaining to prevent errors if buckets is undefined
     const galleryExists = buckets?.some(bucket => bucket.name === 'gallery');
     console.log("Gallery bucket exists:", galleryExists);
     
+    // Only try to create the bucket if it doesn't exist
     if (!galleryExists) {
-      console.log("Creating gallery bucket directly...");
+      console.log("Creating gallery bucket...");
       
-      const { error } = await supabase.storage.createBucket('gallery', { 
-        public: true,
-        fileSizeLimit: 5242880 // 5MB
-      });
-      
-      if (error) {
-        // If the bucket already exists due to race condition, this is fine
-        if (error.message.includes('already exists')) {
-          console.log("Gallery bucket already exists (concurrent creation)");
-          return true;
-        }
+      // Try to create the bucket using storage API
+      try {
+        const { error } = await supabase.storage.createBucket('gallery', { 
+          public: true,
+          fileSizeLimit: 5242880 // 5MB
+        });
         
-        console.error("Error creating gallery bucket:", error);
+        if (error) {
+          console.error("Error creating gallery bucket:", error);
+          if (error.message.includes('already exists')) {
+            console.log("Bucket already exists but wasn't detected - this is fine");
+            return true;
+          }
+          return false;
+        } else {
+          console.log("Gallery bucket created successfully");
+        }
+      } catch (bucketError) {
+        console.error("Failed to create bucket:", bucketError);
         return false;
-      } else {
-        console.log("Gallery bucket created successfully");
       }
     }
     
     return true;
   } catch (error) {
-    console.error("Error checking/creating storage bucket:", error);
+    console.error("Error in setupStorageBucket:", error);
     return false;
   }
 }

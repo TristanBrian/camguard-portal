@@ -49,7 +49,7 @@ const Products = () => {
       try {
         setLoading(true);
         setError(null);
-        console.log("Fetching products...");
+        console.log("Fetching products for display page...");
         
         // Check if products exist, if not log helpful message
         const hasProducts = await ensureProductsExist();
@@ -58,6 +58,7 @@ const Products = () => {
         }
         
         const dbProducts = await fetchProducts();
+        console.log("Fetched products from database:", dbProducts);
         
         if (dbProducts && dbProducts.length > 0) {
           console.log(`Successfully loaded ${dbProducts.length} products`);
@@ -89,7 +90,7 @@ const Products = () => {
           table: 'products'
         },
         (payload) => {
-          console.log('Product changed:', payload);
+          console.log('Product database change detected:', payload);
           loadProducts(); // Reload products when anything changes
         }
       )
