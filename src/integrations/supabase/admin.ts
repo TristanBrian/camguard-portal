@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/data/productsData";
 
@@ -234,14 +235,13 @@ export async function addToProductGallery(productId: string, imageUrls: string[]
 }
 
 /**
- * Statistics: Get product stats
+ * Statistics: Get product stats with enhanced analytics
  */
 export async function getProductStats() {
   try {
     const { data, error } = await supabase
       .from("products")
-      .select("category, price, stock")
-      .order("created_at", { ascending: false });
+      .select("category, price, stock, brand, model, difficulty");
     
     if (error) {
       console.error("Error fetching product stats:", error);
@@ -254,19 +254,55 @@ export async function getProductStats() {
       totalValue: data?.reduce((sum, item) => sum + Number(item.price) * Number(item.stock), 0) || 0,
       totalStock: data?.reduce((sum, item) => sum + Number(item.stock), 0) || 0,
       categoryCounts: {} as Record<string, number>,
-      categoryValue: {} as Record<string, number>
+      categoryValue: {} as Record<string, number>,
+      brandCounts: {} as Record<string, number>,
+      lowStockCount: 0,
+      outOfStockCount: 0,
+      difficultyBreakdown: {
+        Easy: 0,
+        Medium: 0,
+        Advanced: 0
+      },
+      lowStockItems: [] as any[],
+      outOfStockItems: [] as any[]
     };
     
-    // Process categories
+    // Process items
     if (data) {
       data.forEach(item => {
-        const category = item.category;
+        // Process categories
+        const category = item.category || 'Uncategorized';
         if (!stats.categoryCounts[category]) {
           stats.categoryCounts[category] = 0;
           stats.categoryValue[category] = 0;
         }
         stats.categoryCounts[category]++;
         stats.categoryValue[category] += Number(item.price) * Number(item.stock);
+        
+        // Process brands
+        if (item.brand) {
+          if (!stats.brandCounts[item.brand]) {
+            stats.brandCounts[item.brand] = 0;
+          }
+          stats.brandCounts[item.brand]++;
+        }
+        
+        // Process difficulty
+        if (item.difficulty && ['Easy', 'Medium', 'Advanced'].includes(item.difficulty)) {
+          stats.difficultyBreakdown[item.difficulty as keyof typeof stats.difficultyBreakdown]++;
+        } else {
+          stats.difficultyBreakdown.Medium++;
+        }
+        
+        // Count low/out of stock items
+        const stock = Number(item.stock);
+        if (stock === 0) {
+          stats.outOfStockCount++;
+          stats.outOfStockItems.push(item);
+        } else if (stock <= 5) {
+          stats.lowStockCount++;
+          stats.lowStockItems.push(item);
+        }
       });
     }
     
@@ -302,7 +338,7 @@ export async function setupStorageBucket() {
       const { data, error } = await supabase.storage.createBucket('gallery', {
         public: true,
         fileSizeLimit: 10485760, // 10MB
-        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif']
+        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp']
       });
       
       if (error) {
@@ -310,15 +346,6 @@ export async function setupStorageBucket() {
         throw error;
       } else {
         console.log("Gallery bucket created successfully");
-      }
-      
-      // Add a public policy to the bucket to ensure images are accessible
-      try {
-        // This step might not be necessary as the bucket is set to public
-        console.log("Bucket created and set to public");
-      } catch (policyError) {
-        console.error("Error setting bucket policy:", policyError);
-        // Continue anyway as the bucket is already public
       }
     }
     
