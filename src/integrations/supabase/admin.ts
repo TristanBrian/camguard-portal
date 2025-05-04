@@ -23,6 +23,8 @@ export async function isAdmin(userId: string): Promise<boolean> {
  */
 export async function fetchProducts(): Promise<Product[]> {
   try {
+    console.log("Fetching products from database...");
+    
     // Use a more complete query with explicit ordering and error handling
     const { data, error } = await supabase
       .from("products")
@@ -145,42 +147,11 @@ export async function deleteProduct(id: string) {
  */
 export async function uploadProductImage(file: File, fileName: string) {
   try {
-    // Check if the bucket exists, create if it doesn't
-    const { data: buckets } = await supabase.storage.listBuckets();
-    console.log("Available buckets:", buckets);
-    
-    const galleryExists = buckets?.some(bucket => bucket.name === 'gallery');
-    
-    if (!galleryExists) {
-      console.log("Gallery bucket doesn't exist, creating...");
-      try {
-        await setupStorageBucket();
-      } catch (bucketError) {
-        console.error("Failed to create gallery bucket:", bucketError);
-        // Attempt to use another method for creation
-        try {
-          const { data, error } = await supabase.storage.createBucket('gallery', {
-            public: true,
-            fileSizeLimit: 10485760, // 10MB
-            allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif']
-          });
-          
-          if (error) throw error;
-          console.log("Gallery bucket created using alternative method");
-        } catch (altError) {
-          console.error("All attempts to create bucket failed:", altError);
-          throw new Error("Unable to create storage bucket. Please check permissions.");
-        }
-      }
-    }
-    
-    // Add timestamp to filename to prevent collisions
-    const uniqueFileName = `${Date.now()}-${fileName.replace(/\s+/g, '-')}`;
-    console.log("Uploading image with filename:", uniqueFileName);
+    console.log("Uploading image with filename:", fileName);
     
     const { data, error } = await supabase.storage
       .from("gallery")
-      .upload(uniqueFileName, file, {
+      .upload(fileName, file, {
         cacheControl: "3600",
         upsert: true,
       });
@@ -191,7 +162,7 @@ export async function uploadProductImage(file: File, fileName: string) {
     }
     
     // Get and return public URL
-    const publicUrl = supabase.storage.from("gallery").getPublicUrl(uniqueFileName);
+    const publicUrl = supabase.storage.from("gallery").getPublicUrl(fileName);
     console.log("Uploaded successfully, public URL:", publicUrl.data.publicUrl);
     return publicUrl.data.publicUrl;
   } catch (error) {

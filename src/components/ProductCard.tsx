@@ -76,6 +76,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     <div 
       className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden h-full flex flex-col cursor-pointer"
       onClick={handleCardClick}
+      data-testid="product-card"
     >
       <div className="relative">
         <img 
