@@ -6,8 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Upload, Image } from 'lucide-react';
+import { Upload, Image, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ProductFormProps {
   onSubmit: (data: any) => Promise<void>;
@@ -145,9 +146,16 @@ const ProductForm: React.FC<ProductFormProps> = ({
         console.log("Submitting product data:", productData);
         await onSubmit(productData);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting product:", error);
-      toast.error("Failed to save product");
+      
+      // Handle permission errors specifically
+      if (error.message?.includes('policy') || error.message?.includes('permission') || 
+          error.message?.includes('authentication') || error.message?.includes('auth')) {
+        toast.error("Permission denied. Admin authentication required.");
+      } else {
+        toast.error(`Failed to save product: ${error.message || "Unknown error"}`);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -160,6 +168,14 @@ const ProductForm: React.FC<ProductFormProps> = ({
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-6">
+          {/* Show authentication warning for admin features */}
+          <Alert variant="destructive" className="mb-4">
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            <AlertDescription>
+              Admin authentication is required to add or edit products.
+            </AlertDescription>
+          </Alert>
+          
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div>

@@ -26,6 +26,7 @@ refresh_token_reuse_interval = 10
 
 [storage]
 enabled = true
+file_size_limit = "50MiB"
 
 [functions]
 [functions.create-bucket]

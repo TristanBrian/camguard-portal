@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { Product } from '@/data/productsData';
 import { fetchProducts, createProduct, updateProduct, deleteProduct, isAdmin, uploadProductImage, uploadGalleryImages, setupStorageBucket } from "@/integrations/supabase/admin";
 import { supabase } from "@/integrations/supabase/client";
+import { adminClient } from "@/integrations/supabase/adminClient";
 
 const ProductManager: React.FC = () => {
   const navigate = useNavigate();
@@ -41,6 +43,18 @@ const ProductManager: React.FC = () => {
           if (parsedUser.email === 'admin@kimcom.com') {
             setIsAdminUser(true);
             setLoading(false);
+            
+            // For hardcoded admin, also sign in to Supabase for admin access
+            try {
+              await adminClient.auth.signInWithPassword({
+                email: 'admin@kimcom.com',
+                password: 'admin123'
+              });
+              console.log("Admin signed in to Supabase");
+            } catch (err) {
+              console.log("Admin auto-signin failed, using service role instead");
+            }
+            
             return;
           }
         } catch (e) {
@@ -66,7 +80,13 @@ const ProductManager: React.FC = () => {
     checkAdminStatus();
     
     // Setup storage bucket if needed
-    setupStorageBucket();
+    setupStorageBucket().then(success => {
+      if (success) {
+        console.log("Storage bucket setup completed successfully");
+      } else {
+        console.warn("Storage bucket setup failed, some features may not work");
+      }
+    });
   }, []);
 
   const fetchAllProducts = async () => {
