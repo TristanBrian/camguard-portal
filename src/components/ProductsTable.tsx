@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Product } from '@/data/productsData';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -29,12 +29,12 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
   onRefresh,
   isAdmin = false
 }) => {
-  // Debug information 
+  const [debugMode, setDebugMode] = useState(false);
+  
+  // Enhanced debug information with better visibility
   console.log("ProductsTable rendering with products:", products);
-  console.log("Loading status:", isLoading);
-  console.log("Error status:", error);
-  console.log("isAdmin:", isAdmin);
-
+  console.log("ProductsTable props:", { isLoading, error, isAdmin, productsCount: products?.length || 0 });
+  
   if (isLoading) {
     return (
       <div className="text-center py-8">
@@ -50,10 +50,30 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
         <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-2" />
         <p className="text-red-500 mb-4">{error}</p>
         {onRefresh && (
-          <Button onClick={onRefresh} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
+          <Button 
+            onClick={onRefresh} 
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
             Try Again
           </Button>
+        )}
+        
+        {/* Add debug toggle button when there's an error */}
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={() => setDebugMode(!debugMode)}
+          className="mt-4 text-xs"
+        >
+          {debugMode ? "Hide Debug Info" : "Show Debug Info"}
+        </Button>
+        
+        {debugMode && (
+          <div className="mt-4 p-4 bg-gray-100 rounded text-left text-xs overflow-auto max-h-40">
+            <pre>{JSON.stringify({ error, products }, null, 2)}</pre>
+          </div>
         )}
       </div>
     );
@@ -64,10 +84,30 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
       <div className="text-center py-8">
         <p className="text-gray-500 mb-4">No products found</p>
         {onRefresh && (
-          <Button onClick={onRefresh} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
+          <Button 
+            onClick={onRefresh} 
+            variant="outline"
+            className="flex items-center gap-2 mb-4"
+          >
+            <RefreshCw className="h-4 w-4" />
             Refresh Products
           </Button>
+        )}
+        
+        {/* Add debug toggle button when no products */}
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={() => setDebugMode(!debugMode)}
+          className="text-xs"
+        >
+          {debugMode ? "Hide Debug Info" : "Show Debug Info"}
+        </Button>
+        
+        {debugMode && (
+          <div className="mt-4 p-4 bg-gray-100 rounded text-left text-xs overflow-auto max-h-40">
+            <pre>{JSON.stringify({ products }, null, 2)}</pre>
+          </div>
         )}
       </div>
     );
@@ -143,6 +183,24 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
           ))}
         </TableBody>
       </Table>
+      
+      {/* Add debug button at the bottom of the table too */}
+      <div className="mt-4 text-right">
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={() => setDebugMode(!debugMode)}
+          className="text-xs"
+        >
+          {debugMode ? "Hide Debug Info" : "Show Debug Info"}
+        </Button>
+        
+        {debugMode && (
+          <div className="mt-2 p-4 bg-gray-100 rounded text-left text-xs overflow-auto max-h-40">
+            <pre>{JSON.stringify({ products, count: products.length }, null, 2)}</pre>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

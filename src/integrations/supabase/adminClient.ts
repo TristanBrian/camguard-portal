@@ -125,36 +125,62 @@ export const debugFetchProducts = async () => {
       // Continue with fetch anyway since we want to try public RLS policy
     }
     
-    const { data, error } = await adminClient
+    // Try to fetch products using the service role client directly
+    const { data: adminProducts, error: adminError } = await adminClient
       .from('products')
       .select('*')
       .order('created_at', { ascending: false });
       
-    if (error) {
-      console.error("Debug fetch error:", error);
-      
-      // If there's an error with service role client, try with public client 
-      // as a fallback to see if RLS public policy works
-      console.log("Trying with public client as fallback...");
-      const { data: publicData, error: publicError } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (publicError) {
-        console.error("Public client fetch error:", publicError);
-        return [];
-      } else {
-        console.log(`Public client fetch returned ${publicData?.length || 0} products`);
-        return publicData || [];
-      }
+    if (adminError) {
+      console.error("Debug admin fetch error:", adminError);
+    } else if (adminProducts && adminProducts.length > 0) {
+      console.log(`Successfully loaded ${adminProducts.length} products with adminClient:`, adminProducts);
+      return adminProducts;
     } else {
-      console.log(`Debug fetch returned ${data?.length || 0} products:`, data);
-      return data || [];
+      console.log("No products found with adminClient");
+    }
+      
+    // If admin client didn't work or returned no products, try public client as fallback
+    console.log("Trying with public client as fallback...");
+    const { data: publicData, error: publicError } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    if (publicError) {
+      console.error("Public client fetch error:", publicError);
+      throw new Error(`Failed to fetch products: ${publicError.message}`);
+    } else {
+      console.log(`Public client fetch returned ${publicData?.length || 0} products:`, publicData);
+      return publicData || [];
     }
   } catch (err) {
     console.error("Debug fetch exception:", err);
-    return [];
+    throw err;
+  }
+};
+
+// Function to force an insert directly to the database bypassing RLS
+export const forceInsertProduct = async (productData) => {
+  try {
+    console.log("Force inserting product with service role client:", productData);
+    
+    const { data, error } = await adminClient
+      .from('products')
+      .insert([productData])
+      .select()
+      .single();
+      
+    if (error) {
+      console.error("Force insert error:", error);
+      throw error;
+    }
+    
+    console.log("Product force inserted successfully:", data);
+    return data;
+  } catch (err) {
+    console.error("Force insert exception:", err);
+    throw err;
   }
 };
 
