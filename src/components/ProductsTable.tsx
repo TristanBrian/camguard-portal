@@ -3,29 +3,37 @@ import React from 'react';
 import { Product } from '@/data/productsData';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Edit, Trash2, AlertCircle, RefreshCw, Eye, ShoppingCart } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface ProductsTableProps {
   products: Product[];
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onView?: (id: string) => void;
+  onAddToCart?: (id: string) => void;
   isLoading?: boolean;
   error?: string | null;
   onRefresh?: () => void;
+  isAdmin?: boolean;
 }
 
 const ProductsTable: React.FC<ProductsTableProps> = ({ 
   products, 
   onEdit, 
   onDelete,
+  onView,
+  onAddToCart,
   isLoading = false,
   error = null,
-  onRefresh
+  onRefresh,
+  isAdmin = false
 }) => {
   // Debug information 
   console.log("ProductsTable rendering with products:", products);
   console.log("Loading status:", isLoading);
   console.log("Error status:", error);
+  console.log("isAdmin:", isAdmin);
 
   if (isLoading) {
     return (
@@ -92,18 +100,39 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
                   }}
                 />
               </TableCell>
-              <TableCell className="font-medium">{product.name}</TableCell>
+              <TableCell className="font-medium">
+                {product.name}
+                <div>
+                  <Badge variant="outline" className="mt-1">
+                    {product.category}
+                  </Badge>
+                </div>
+              </TableCell>
               <TableCell>{product.category}</TableCell>
               <TableCell>KSh {product.price?.toLocaleString() ?? 0}</TableCell>
-              <TableCell>{product.stock}</TableCell>
+              <TableCell>
+                <span className={Number(product.stock) <= 5 ? 'text-red-600 font-medium' : ''}>
+                  {product.stock}
+                </span>
+              </TableCell>
               <TableCell>
                 <div className="flex space-x-2">
-                  {onEdit && (
+                  {onView && (
+                    <Button variant="ghost" size="sm" onClick={() => onView(product.id)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {onAddToCart && (
+                    <Button variant="ghost" size="sm" onClick={() => onAddToCart(product.id)}>
+                      <ShoppingCart className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {isAdmin && onEdit && (
                     <Button variant="ghost" size="sm" onClick={() => onEdit(product.id)}>
                       <Edit className="h-4 w-4" />
                     </Button>
                   )}
-                  {onDelete && (
+                  {isAdmin && onDelete && (
                     <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => onDelete(product.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>

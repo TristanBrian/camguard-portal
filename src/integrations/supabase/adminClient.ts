@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { checkIfAdmin } from '@/utils/adminAuth';
@@ -114,19 +115,48 @@ export const createProductsTable = async (): Promise<boolean> => {
 export const debugFetchProducts = async () => {
   try {
     console.log("Debug: Directly fetching products with admin client");
+    
+    // Try to ensure admin authentication first
+    try {
+      await ensureAdminAuth();
+      console.log("Admin authentication confirmed for debug fetch");
+    } catch (authError) {
+      console.warn("Admin auth check failed, but continuing with fetch:", authError);
+      // Continue with fetch anyway since we want to try public RLS policy
+    }
+    
     const { data, error } = await adminClient
       .from('products')
-      .select('*');
+      .select('*')
+      .order('created_at', { ascending: false });
       
     if (error) {
       console.error("Debug fetch error:", error);
+      
+      // If there's an error with service role client, try with public client 
+      // as a fallback to see if RLS public policy works
+      console.log("Trying with public client as fallback...");
+      const { data: publicData, error: publicError } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (publicError) {
+        console.error("Public client fetch error:", publicError);
+        return [];
+      } else {
+        console.log(`Public client fetch returned ${publicData?.length || 0} products`);
+        return publicData || [];
+      }
     } else {
       console.log(`Debug fetch returned ${data?.length || 0} products:`, data);
+      return data || [];
     }
-    
-    return data || [];
   } catch (err) {
     console.error("Debug fetch exception:", err);
     return [];
   }
 };
+
+// Import the supabase public client for fallback fetching
+import { supabase } from './client';

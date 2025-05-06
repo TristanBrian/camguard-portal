@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import ProductDetailPopup from '@/components/ProductDetailPopup';
+import ProductsTable from '@/components/ProductsTable'; // Import ProductsTable for better display
 import { Button } from '@/components/ui/button';
 import { 
   ArrowLeft, 
@@ -26,7 +27,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { supabase } from '@/integrations/supabase/client';
-import { adminClient, ensureAdminAuth } from '@/integrations/supabase/adminClient';
+import { adminClient, ensureAdminAuth, debugFetchProducts } from '@/integrations/supabase/adminClient';
 import { initializeAdminIfNeeded } from '@/utils/adminAuth';
 
 const Products = () => {
@@ -58,7 +59,7 @@ const Products = () => {
         let productsData: Product[] = [];
         let fetchError = null;
         
-        // First try fetching with the regular client since we don't need admin for viewing
+        // First try fetching with the regular client since RLS should allow public read access
         try {
           console.log("Trying to fetch products with regular supabase client...");
           const { data: regularProducts, error: regularError } = await supabase
@@ -80,19 +81,13 @@ const Products = () => {
           fetchError = regularErr;
         }
         
-        // If regular client didn't work, try admin client as fallback
+        // If regular client didn't work or returned no products, try admin client as fallback
         if (productsData.length === 0) {
           try {
             console.log("Trying admin client as fallback...");
-            const { data: adminProducts, error: adminError } = await adminClient
-              .from('products')
-              .select('*')
-              .order('created_at', { ascending: false });
+            const adminProducts = await debugFetchProducts();
               
-            if (adminError) {
-              console.error("Admin fetch error:", adminError);
-              fetchError = adminError;
-            } else if (adminProducts && adminProducts.length > 0) {
+            if (adminProducts && adminProducts.length > 0) {
               console.log(`Successfully loaded ${adminProducts.length} products with adminClient`);
               productsData = adminProducts as Product[];
             } else {
