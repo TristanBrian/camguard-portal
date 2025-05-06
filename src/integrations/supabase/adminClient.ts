@@ -21,36 +21,43 @@ export const adminClient = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE
 
 // Function to ensure a user is admin before using admin functions
 export const ensureAdminAuth = async () => {
-  // Check for hardcoded admin credentials in localStorage first
-  const currentUser = localStorage.getItem('kimcom_current_user');
-  if (currentUser) {
-    try {
-      const parsedUser = JSON.parse(currentUser);
-      if (parsedUser.email === 'admin@kimcom.com' && parsedUser.role === 'admin') {
-        return true; // This is our hardcoded admin user
+  try {
+    // Check for hardcoded admin credentials in localStorage first
+    const currentUser = localStorage.getItem('kimcom_current_user');
+    if (currentUser) {
+      try {
+        const parsedUser = JSON.parse(currentUser);
+        if (parsedUser.email === 'admin@kimcom.com' && parsedUser.role === 'admin') {
+          console.log("Admin authentication via localStorage successful");
+          return true; // This is our hardcoded admin user
+        }
+      } catch (err) {
+        console.error("Error parsing stored user:", err);
       }
-    } catch (err) {
-      console.error("Error parsing stored user:", err);
     }
-  }
-  
-  // Otherwise check for Supabase auth
-  const { data: { user } } = await adminClient.auth.getUser();
-  if (!user) {
-    throw new Error("Authentication required for admin operations");
-  }
-  
-  const { data: roles } = await adminClient
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("role", "admin");
     
-  if (!roles || roles.length === 0) {
-    throw new Error("Admin role required for this operation");
+    // Otherwise check for Supabase auth
+    const { data: { user } } = await adminClient.auth.getUser();
+    if (!user) {
+      throw new Error("Authentication required for admin operations");
+    }
+    
+    const { data: roles } = await adminClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin");
+      
+    if (!roles || roles.length === 0) {
+      throw new Error("Admin role required for this operation");
+    }
+    
+    console.log("Admin authentication via Supabase successful");
+    return true;
+  } catch (error) {
+    console.error("Admin authentication failed:", error);
+    throw error;
   }
-  
-  return true;
 };
 
 // Create a storage bucket if it doesn't exist
@@ -65,16 +72,33 @@ export const createStorageBucket = async (bucketName: string, isPublic = true): 
       return true;
     }
     
-    // First try to create the bucket via edge function
+    // First try direct access to check if bucket exists
+    try {
+      console.log(`Checking if bucket ${bucketName} exists via direct access`);
+      const { data: bucketData, error: getBucketError } = await adminClient
+        .storage
+        .getBucket(bucketName);
+        
+      if (!getBucketError) {
+        console.log(`Bucket ${bucketName} already exists, confirmed via direct check`);
+        sessionStorage.setItem(bucketExistsKey, 'true');
+        return true;
+      }
+    } catch (directCheckErr) {
+      console.log("Bucket direct check error:", directCheckErr);
+      // Continue to creation attempts
+    }
+    
+    // Try to create the bucket via edge function
     try {
       console.log(`Attempting to create/verify bucket ${bucketName} via edge function`);
       const { data, error } = await adminClient.functions.invoke("create-bucket", {
-        body: { bucketName },
+        body: { bucketName, isPublic },
       });
       
       if (error) {
         console.error("Edge function error:", error);
-        // Don't return yet, we'll try direct access as fallback
+        // Don't return yet, we'll try direct creation as fallback
       } else if (data && data.success) {
         console.log("Edge function success:", data);
         // Mark the bucket as existing for this session
@@ -84,6 +108,29 @@ export const createStorageBucket = async (bucketName: string, isPublic = true): 
     } catch (edgeFuncErr) {
       console.error("Error calling edge function:", edgeFuncErr);
       // Continue to fallback methods
+    }
+    
+    // Fallback: Try to create bucket directly
+    try {
+      console.log(`Attempting to create bucket ${bucketName} directly`);
+      const { data, error } = await adminClient.storage.createBucket(bucketName, {
+        public: isPublic,
+      });
+      
+      if (error) {
+        if (error.message.includes('already exists')) {
+          console.log(`Bucket ${bucketName} already exists (from error message)`);
+          sessionStorage.setItem(bucketExistsKey, 'true');
+          return true;
+        }
+        console.error("Error creating bucket directly:", error);
+      } else {
+        console.log(`Successfully created bucket ${bucketName}`);
+        sessionStorage.setItem(bucketExistsKey, 'true');
+        return true;
+      }
+    } catch (directCreateErr) {
+      console.error("Error creating bucket directly:", directCreateErr);
     }
     
     // Fallback: Mark as successful anyway since most errors are from bucket already existing

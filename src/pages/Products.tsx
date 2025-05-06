@@ -26,7 +26,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { supabase } from '@/integrations/supabase/client';
-import { fetchProducts, ensureProductsExist } from '@/integrations/supabase/admin';
+import { adminClient, ensureAdminAuth } from '@/integrations/supabase/adminClient';
 
 const Products = () => {
   const navigate = useNavigate();
@@ -51,23 +51,58 @@ const Products = () => {
         setError(null);
         console.log("Fetching products for display page...");
         
-        // Check if products exist, if not log helpful message
-        const hasProducts = await ensureProductsExist();
-        if (!hasProducts) {
-          console.log("No products found in database. This could be normal for a new setup.");
+        // Try fetching with adminClient first (which should bypass RLS)
+        let productsData: Product[] = [];
+        
+        try {
+          const { data: adminProducts, error: adminError } = await adminClient
+            .from('products')
+            .select('*')
+            .order('created_at', { ascending: false });
+            
+          if (adminError) {
+            console.error("Admin fetch error:", adminError);
+            throw adminError;
+          }
+          
+          if (adminProducts && adminProducts.length > 0) {
+            console.log(`Successfully loaded ${adminProducts.length} products with adminClient`);
+            productsData = adminProducts as Product[];
+          } else {
+            console.log("No products found with adminClient");
+          }
+        } catch (adminErr) {
+          console.error("Failed to fetch products with adminClient:", adminErr);
+          
+          // Fallback to regular supabase client
+          console.log("Trying regular client as fallback...");
+          const { data: regularProducts, error: regularError } = await supabase
+            .from('products')
+            .select('*')
+            .order('created_at', { ascending: false });
+            
+          if (regularError) {
+            console.error("Regular fetch error:", regularError);
+            throw regularError;
+          }
+          
+          if (regularProducts && regularProducts.length > 0) {
+            console.log(`Successfully loaded ${regularProducts.length} products with regular client`);
+            productsData = regularProducts as Product[];
+          } else {
+            console.log("No products found with regular client either");
+          }
         }
         
-        const dbProducts = await fetchProducts();
-        console.log("Fetched products from database:", dbProducts);
-        
-        if (dbProducts && dbProducts.length > 0) {
-          console.log(`Successfully loaded ${dbProducts.length} products`);
-          setProducts(dbProducts);
-          toast.success(`Loaded ${dbProducts.length} products`);
+        if (productsData.length > 0) {
+          console.log("Products loaded:", productsData);
+          setProducts(productsData);
+          toast.success(`Loaded ${productsData.length} products`);
         } else {
           console.log("No products found in the database");
           toast.warning("No products found. You may need to add some products in the admin dashboard.");
         }
+        
         setLoading(false);
       } catch (error) {
         console.error("Error fetching products:", error);
