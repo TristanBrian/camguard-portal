@@ -83,9 +83,11 @@ export async function fetchProducts(): Promise<Product[]> {
 
 export async function createProduct(product: Omit<Product, 'id'>) {
   try {
-    // First check admin authentication - with improved error handling
+    // First check admin authentication with improved error handling
     try {
+      console.log("Verifying admin authentication...");
       await ensureAdminAuth();
+      console.log("Admin authentication successful");
     } catch (authError) {
       console.error("Admin authentication failed:", authError);
       throw new Error("Authentication required for admin operations");
@@ -109,7 +111,7 @@ export async function createProduct(product: Omit<Product, 'id'>) {
     };
     
     try {
-      // Use explicit headers for admin client to ensure proper authentication
+      // Use adminClient with proper authorization headers
       const { data, error } = await adminClient
         .from("products")
         .insert([productToInsert])

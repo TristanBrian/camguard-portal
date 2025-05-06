@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -57,7 +56,8 @@ const PasswordChangeForm: React.FC = () => {
           const parsedUser = JSON.parse(currentUser);
           if (parsedUser.email === 'admin@kimcom.com' && parsedUser.role === 'admin') {
             // For hardcoded admin, verify current password
-            if (data.currentPassword !== 'admin123') {
+            const storedPassword = localStorage.getItem('kimcom_admin_password') || 'admin123';
+            if (data.currentPassword !== storedPassword) {
               throw new Error('Current password is incorrect');
             }
             

@@ -51,6 +51,8 @@ const ProductManager: React.FC = () => {
               console.warn("Error checking storage bucket:", err);
             }
             
+            // Load products after confirming admin status
+            fetchAllProducts();
             return;
           }
         } catch (e) {
@@ -66,6 +68,14 @@ const ProductManager: React.FC = () => {
           const hasRole = await isAdmin(user.id);
           setIsAdminUser(hasRole);
           console.log("Admin status from Supabase:", hasRole);
+          
+          if (hasRole) {
+            // Load products after confirming admin status
+            fetchAllProducts();
+          } else {
+            // Redirect to login page if not admin
+            setTimeout(() => navigate('/admin-login'), 1500);
+          }
         } else {
           console.log("No authenticated user found in Supabase");
           setIsAdminUser(false);
@@ -152,6 +162,7 @@ const ProductManager: React.FC = () => {
       // Try to login as admin to ensure we have proper permissions
       try {
         await ensureAdminAuth();
+        console.log("Admin authentication confirmed for product creation");
       } catch (err) {
         console.error("Admin auth check failed:", err);
         toast.error("Administrator authentication failed. Please login again.");
@@ -160,6 +171,7 @@ const ProductManager: React.FC = () => {
         return;
       }
       
+      // Process image upload
       let imageUrl = undefined;
       if (productData.image instanceof File) {
         const fileName = `product-${Date.now()}-${productData.image.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
@@ -192,7 +204,7 @@ const ProductManager: React.FC = () => {
         }
       }
       
-      // Process features text input and combine with gallery URLs
+      // Process features and prepare payload
       let features: string[] = [];
       if (productData.features && typeof productData.features === 'string') {
         features = productData.features.split('\n').filter((f: string) => f.trim());
