@@ -45,12 +45,16 @@ interface ProductFormProps {
   onSubmit: (data: ProductFormValues & { image?: File, imageUrl?: string }) => void;
   initialData?: ProductFormValues & { image?: string, imageUrl?: string };
   isEditing?: boolean;
+  categories?: string[];
+  addCategory?: (newCategory: string) => void;
 }
 
 const ProductForm: React.FC<ProductFormProps> = ({ 
   onSubmit, 
   initialData, 
-  isEditing = false 
+  isEditing = false,
+  categories = [],
+  addCategory,
 }) => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.image || initialData?.imageUrl || null);
@@ -203,19 +207,45 @@ const ProductForm: React.FC<ProductFormProps> = ({
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Category</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Category" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <FormControl>
+                        <select
+                          {...field}
+                          className="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-kimcom-500"
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '__add_new__') {
+                              const newCategory = prompt('Enter new category');
+                              if (newCategory && newCategory.trim() !== '') {
+                                if (addCategory && !categories?.includes(newCategory.trim())) {
+                                  addCategory(newCategory.trim());
+                                }
+                                field.onChange(newCategory.trim());
+                              } else {
+                                field.onChange('');
+                              }
+                            } else {
+                              field.onChange(value);
+                            }
+                          }}
+                          value={field.value || ''}
+                        >
+                          <option value="" disabled>Select category</option>
+                          {categories?.map((category) => (
+                            <option key={category} value={category}>{category}</option>
+                          ))}
+                          <option value="__add_new__">Add new category...</option>
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
@@ -306,7 +336,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
                         <Textarea 
                           placeholder="Enter features, one per line" 
                           className="min-h-[120px]"
-                          {...field} 
+                          value={Array.isArray(field.value) ? field.value.join('\n') : field.value}
+                          onChange={(e) => field.onChange(e.target.value)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -377,19 +408,27 @@ const ProductForm: React.FC<ProductFormProps> = ({
                         <p className="text-xs text-gray-400">PNG, JPG or WEBP (max. 2MB)</p>
                         
                         <div className="mt-4 flex justify-center">
-                          <label htmlFor="file-upload" className="cursor-pointer">
-                            <Button type="button" variant="outline" size="sm">
-                              <Upload className="h-4 w-4 mr-2" />
-                              Select File
-                            </Button>
-                            <input
-                              id="file-upload"
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={handleImageChange}
-                            />
-                          </label>
+                          <input
+                            id="file-upload"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleImageChange}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const fileInput = document.getElementById('file-upload');
+                              if (fileInput) {
+                                fileInput.click();
+                              }
+                            }}
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Select File
+                          </Button>
                         </div>
                       </div>
                     ) : (

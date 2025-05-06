@@ -9,13 +9,23 @@ import Navbar from '@/components/Navbar';
 import { supabase } from "@/integrations/supabase/client";
 import { isAdmin } from "@/integrations/supabase/admin";
 
+import { useLocation } from 'react-router-dom';
+
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
+    // Restrict access: only allow if fromFooter query param is true
+    const params = new URLSearchParams(location.search);
+    if (params.get('fromFooter') !== 'true') {
+      navigate('/');
+      return;
+    }
+
     // On mount, check if a Supabase user is logged in and is admin
     const checkAdmin = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -27,7 +37,7 @@ const AdminLogin: React.FC = () => {
       }
     };
     checkAdmin();
-  }, [navigate]);
+  }, [navigate, location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

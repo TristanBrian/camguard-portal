@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from 'components/ui/button';
+import { Input } from 'components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from 'components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from 'components/ui/tabs';
+import { Badge } from 'components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from 'components/ui/dropdown-menu';
+import { Checkbox } from 'components/ui/checkbox';
 import { Package, PlusCircle, Search, MoreVertical, Edit, Trash, ArrowUpDown, Download, UploadCloud, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import ProductForm from '@/components/admin/ProductForm';
+import ProductForm from 'components/admin/ProductForm';
 import { useNavigate } from 'react-router-dom';
-import { Product } from '@/data/productsData';
-import { fetchProducts, createProduct, updateProduct, deleteProduct, isAdmin, uploadProductImage, uploadGalleryImages, setupStorageBucket } from "@/integrations/supabase/admin";
-import { supabase } from "@/integrations/supabase/client";
+import { Product } from 'data/productsData';
+import { fetchProducts, createProduct, updateProduct, deleteProduct, isAdmin, uploadProductImage, uploadGalleryImages, setupStorageBucket } from '../../integrations/supabase/admin';
+import { supabase } from '../../integrations/supabase/client';
 
 const ProductManager: React.FC = () => {
   const navigate = useNavigate();
@@ -28,6 +28,7 @@ const ProductManager: React.FC = () => {
   const [galleryUploadLoading, setGalleryUploadLoading] = useState(false);
   const [currentGalleryProductId, setCurrentGalleryProductId] = useState<string|null>(null);
   const [galleryPreviewUrls, setGalleryPreviewUrls] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>(['tp link', 'd link', 'Dahua']);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -64,9 +65,16 @@ const ProductManager: React.FC = () => {
     };
     
     checkAdminStatus();
-    
+
     // Setup storage bucket if needed
     setupStorageBucket();
+
+    // Ensure gallery bucket exists by calling backend function
+    import('../../../supabase/adminBucket').then(({ ensureGalleryBucketExists }) => {
+      ensureGalleryBucketExists().catch(err => {
+        console.error("Error ensuring gallery bucket exists:", err);
+      });
+    });
   }, []);
 
   const fetchAllProducts = async () => {
@@ -113,6 +121,15 @@ const ProductManager: React.FC = () => {
 
   const handleAddProduct = async (productData: any) => {
     try {
+      // Ensure user session is active
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You must be logged in to add a product.");
+        return;
+      }
+
       let imageUrl = undefined;
       if (productData.image instanceof File) {
         const fileName = `product-${Date.now()}-${productData.image.name}`;
@@ -561,9 +578,15 @@ const ProductManager: React.FC = () => {
         </TabsContent>
         
         <TabsContent value="add">
-          <ProductForm 
-            onSubmit={handleAddProduct}
-          />
+        <ProductForm 
+          onSubmit={handleAddProduct}
+          categories={categories}
+          addCategory={(newCategory: string) => {
+            if (!categories.includes(newCategory)) {
+              setCategories([...categories, newCategory]);
+            }
+          }}
+        />
         </TabsContent>
         
         {editingProduct && (
@@ -582,6 +605,12 @@ const ProductManager: React.FC = () => {
                 model: editingProduct.model || '',
                 features: editingProduct.features ? editingProduct.features.split('\n').filter((f: string) => f.trim()) : '',
                 difficulty: editingProduct.difficulty || 'Medium',
+              }}
+              categories={categories}
+              addCategory={(newCategory: string) => {
+                if (!categories.includes(newCategory)) {
+                  setCategories([...categories, newCategory]);
+                }
               }}
               isEditing={true}
             />

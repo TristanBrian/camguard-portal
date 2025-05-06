@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/data/productsData";
 
@@ -45,6 +44,12 @@ export async function fetchProducts(): Promise<Product[]> {
 }
 
 export async function createProduct(product: Omit<Product, 'id'>) {
+  // Log current user session for debugging
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  console.log("Creating product as user:", user);
+
   const { data, error } = await supabase
     .from("products")
     .insert([product])
@@ -137,6 +142,34 @@ export async function uploadGalleryImages(files: File[], productId: string) {
 }
 
 /**
+ * List all images in the gallery bucket
+ */
+export async function listGalleryImages() {
+  const { data, error } = await supabase.storage
+    .from("gallery")
+    .list('', { limit: 100, offset: 0, sortBy: { column: 'name', order: 'asc' } });
+  if (error) {
+    console.error("Error listing gallery images:", error);
+    throw error;
+  }
+  return data || [];
+}
+
+/**
+ * Delete an image from the gallery bucket by file name
+ */
+export async function deleteGalleryImage(fileName: string) {
+  const { data, error } = await supabase.storage
+    .from("gallery")
+    .remove([fileName]);
+  if (error) {
+    console.error("Error deleting gallery image:", error);
+    throw error;
+  }
+  return data;
+}
+
+/**
  * Statistics: Get product stats
  */
 export async function getProductStats() {
@@ -181,23 +214,22 @@ export async function getProductStats() {
 export async function setupStorageBucket() {
   try {
     // Check if gallery bucket exists
-    const { data: buckets } = await supabase.storage.listBuckets();
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    if (listError) {
+      console.error("Error listing buckets:", listError);
+      return false;
+    }
     const galleryExists = buckets?.some(bucket => bucket.name === 'gallery');
     
     if (!galleryExists) {
-      // Create the gallery bucket
-      const { data, error } = await supabase.storage.createBucket('gallery', {
-        public: true,
-        fileSizeLimit: 10485760, // 10MB
-      });
-      
-      if (error) {
-        console.error("Error creating gallery bucket:", error);
-      } else {
-        console.log("Gallery bucket created successfully");
-      }
+      // Bucket creation is disabled on client side due to RLS restrictions.
+      console.warn("Gallery bucket does not exist. Please create it using the backend service role key.");
+      // Do not throw error to avoid blocking UI
+      return false;
     }
+    return true;
   } catch (error) {
-    console.error("Error checking/creating storage bucket:", error);
+    console.error("Error checking storage bucket:", error);
+    return false;
   }
 }

@@ -49,6 +49,8 @@ const Products = () => {
         setLoading(true);
         const dbProducts = await fetchProducts();
         setProducts(dbProducts);
+        console.log("Products loaded:", dbProducts.length);
+        toast.success(`Loaded ${dbProducts.length} products`);
         setLoading(false);
       } catch (error) {
         console.error("Error fetching products:", error);
@@ -285,7 +287,7 @@ const Products = () => {
 
         <section className="py-16 bg-gray-50">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="mb-8 flex flex-wrap gap-4">
+            <div className="mb-8 flex flex-wrap items-center gap-4">
               {categories.map((category) => (
                 <button
                   key={category}
@@ -299,6 +301,15 @@ const Products = () => {
                   {category}
                 </button>
               ))}
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedCategory('All');
+                }}
+                className="px-6 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all duration-200"
+              >
+                Clear filters
+              </button>
             </div>
 
             <div className="mb-8 flex justify-between items-center">
