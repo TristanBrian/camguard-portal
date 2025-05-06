@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { checkIfAdmin } from '@/utils/adminAuth';
@@ -137,13 +138,17 @@ export const debugFetchProducts = async () => {
       if (adminError.message?.includes('auth') || adminError.message?.includes('permission')) {
         console.log("Authentication error detected, trying direct SQL query...");
         
-        // Try a direct SQL query as a last resort
+        // Try a direct SQL query as a last resort - Fixed this part to use a proper RPC function
         try {
-          const { data: sqlData, error: sqlError } = await adminClient.rpc('get_all_products');
+          // Instead of using a non-existent RPC function, use a direct SQL query
+          const { data: sqlData, error: sqlError } = await adminClient
+            .from('products')
+            .select('*')
+            .limit(100);
           
           if (sqlError) {
             console.error("SQL query error:", sqlError);
-          } else if (sqlData && sqlData.length > 0) {
+          } else if (sqlData && Array.isArray(sqlData) && sqlData.length > 0) {
             console.log(`SQL query returned ${sqlData.length} products`);
             return sqlData;
           }
@@ -151,7 +156,7 @@ export const debugFetchProducts = async () => {
           console.error("SQL query exception:", sqlErr);
         }
       }
-    } else if (adminProducts && adminProducts.length > 0) {
+    } else if (adminProducts && Array.isArray(adminProducts) && adminProducts.length > 0) {
       console.log(`Successfully loaded ${adminProducts.length} products with adminClient:`, adminProducts);
       return adminProducts;
     } else {
