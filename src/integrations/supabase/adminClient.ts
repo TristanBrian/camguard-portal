@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -13,6 +14,7 @@ export const adminClient = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE
   },
   global: {
     headers: {
+      'apikey': SUPABASE_SERVICE_KEY,
       'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
     },
   },

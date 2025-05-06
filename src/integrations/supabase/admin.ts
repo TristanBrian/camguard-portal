@@ -111,11 +111,11 @@ export async function createProduct(product: Omit<Product, 'id'>) {
     };
     
     try {
-      // Use adminClient with proper authorization headers
+      // Use adminClient with explicit authorization headers for better auth handling
       const { data, error } = await adminClient
         .from("products")
         .insert([productToInsert])
-        .select("*");
+        .select();
       
       if (error) {
         console.error("Error creating product:", error);
