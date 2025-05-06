@@ -32,36 +32,86 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
     
+    console.log(`Checking if bucket ${bucketName} already exists`);
+
+    try {
+      // Check if bucket already exists
+      const { data: existingBucket } = await supabaseAdmin.storage.getBucket(bucketName);
+      
+      if (existingBucket) {
+        console.log(`Bucket ${bucketName} already exists, no need to create it`);
+        return new Response(
+          JSON.stringify({ success: true, bucketName, message: 'Bucket already exists' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+    } catch (checkError) {
+      // Bucket doesn't exist, we'll create it
+      console.log(`Bucket ${bucketName} does not exist, creating it now`);
+    }
+
     console.log(`Creating storage bucket: ${bucketName}`);
 
-    // Create the bucket
-    const { data, error } = await supabaseAdmin.storage.createBucket(bucketName, {
-      public: true,
-      fileSizeLimit: 10485760, // 10MB
-      allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp']
-    });
+    try {
+      // Create the bucket
+      const { data, error } = await supabaseAdmin.storage.createBucket(bucketName, {
+        public: true,
+        fileSizeLimit: 10485760, // 10MB
+        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp']
+      });
 
-    if (error) {
-      console.error("Error creating bucket:", error);
+      if (error) {
+        console.error("Error creating bucket:", error);
+        
+        // If the bucket already exists, this is actually fine
+        if (error.message && error.message.includes('already exists')) {
+          return new Response(
+            JSON.stringify({ success: true, bucketName, message: 'Bucket already exists' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          );
+        }
+        
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+
+      // Create a policy to allow public access to the bucket
+      const policyError = await createPublicPolicy(supabaseAdmin, bucketName);
+      if (policyError) {
+        // Even if policy creation fails, the bucket might have been created successfully
+        // We'll return a success with a warning message
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            bucketName, 
+            warning: `Bucket created but policy error: ${policyError}` 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ success: true, bucketName }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    } catch (bucketError) {
+      console.error("Exception creating bucket:", bucketError);
+      
+      // If the error includes "already exists", it's actually not an error for our purposes
+      if (bucketError.message && bucketError.message.includes('already exists')) {
+        return new Response(
+          JSON.stringify({ success: true, bucketName, message: 'Bucket already exists' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({ error: bucketError.message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
-
-    // Create a policy to allow public access to the bucket
-    const policyError = await createPublicPolicy(supabaseAdmin, bucketName);
-    if (policyError) {
-      return new Response(
-        JSON.stringify({ error: policyError }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ success: true, bucketName }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-    );
   } catch (error) {
     console.error("Error in create-bucket function:", error);
     return new Response(
