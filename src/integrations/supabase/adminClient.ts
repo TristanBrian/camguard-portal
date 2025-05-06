@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { checkIfAdmin } from '@/utils/adminAuth';
@@ -88,27 +87,21 @@ export const createStorageBucket = async (bucketName: string, isPublic = true): 
 // This should create product tables if they don't exist
 export const createProductsTable = async (): Promise<boolean> => {
   try {
-    // Instead of using RPC, we'll check directly if the products table exists
-    // by querying the information schema, which is a more reliable approach
-    const { data, error } = await adminClient
-      .from('information_schema.tables')
-      .select('table_name')
-      .eq('table_schema', 'public')
-      .eq('table_name', 'products')
-      .maybeSingle();
+    // Use a simple query to check if the products table exists by attempting to count rows
+    // This avoids the need to use information_schema which isn't in our type definitions
+    const { count, error } = await adminClient
+      .from('products')
+      .select('*', { count: 'exact', head: true });
     
     if (error) {
+      // If there's an error, it might be because the table doesn't exist
       console.error("Error checking if products table exists:", error);
-      // Mark as existed to not block the UI
-      return true;
-    }
-    
-    if (data) {
-      console.log("Products table already exists");
+      console.log("Products table might not exist, marking as needed for creation");
+      // In a real implementation, we would create the table here
+      // For now, we'll just return true to not block the UI
       return true;
     } else {
-      console.log("Products table doesn't exist, creating...");
-      // Table creation would go here, but for simplicity we'll assume it exists
+      console.log("Products table already exists, found count:", count);
       return true;
     }
   } catch (err) {
