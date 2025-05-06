@@ -9,13 +9,34 @@ interface ProductsTableProps {
   products: Product[];
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
+  isLoading?: boolean;
+  error?: string | null;
 }
 
 const ProductsTable: React.FC<ProductsTableProps> = ({ 
   products, 
   onEdit, 
-  onDelete 
+  onDelete,
+  isLoading = false,
+  error = null
 }) => {
+  if (isLoading) {
+    return (
+      <div className="text-center py-8">
+        <div className="inline-block animate-spin h-8 w-8 border-4 border-kimcom-600 border-t-transparent rounded-full"></div>
+        <p className="mt-2 text-gray-500">Loading products...</p>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
+
   if (!products || products.length === 0) {
     return (
       <div className="text-center py-8">
@@ -23,6 +44,9 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
       </div>
     );
   }
+
+  // Debug information 
+  console.log("ProductsTable rendering with products:", products);
 
   return (
     <div className="w-full overflow-auto">
@@ -78,3 +102,4 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
 };
 
 export default ProductsTable;
+

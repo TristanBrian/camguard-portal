@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/popover";
 import { supabase } from '@/integrations/supabase/client';
 import { adminClient, ensureAdminAuth } from '@/integrations/supabase/adminClient';
+import { initializeAdminIfNeeded } from '@/utils/adminAuth';
 
 const Products = () => {
   const navigate = useNavigate();
@@ -43,6 +44,9 @@ const Products = () => {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   
+  // Ensure we have an admin user for development
+  initializeAdminIfNeeded();
+  
   // Enhanced fetch products function with better error handling
   useEffect(() => {
     const loadProducts = async () => {
@@ -51,31 +55,12 @@ const Products = () => {
         setError(null);
         console.log("Fetching products for display page...");
         
-        // Try fetching with adminClient first (which should bypass RLS)
         let productsData: Product[] = [];
+        let fetchError = null;
         
+        // First try fetching with the regular client since we don't need admin for viewing
         try {
-          const { data: adminProducts, error: adminError } = await adminClient
-            .from('products')
-            .select('*')
-            .order('created_at', { ascending: false });
-            
-          if (adminError) {
-            console.error("Admin fetch error:", adminError);
-            throw adminError;
-          }
-          
-          if (adminProducts && adminProducts.length > 0) {
-            console.log(`Successfully loaded ${adminProducts.length} products with adminClient`);
-            productsData = adminProducts as Product[];
-          } else {
-            console.log("No products found with adminClient");
-          }
-        } catch (adminErr) {
-          console.error("Failed to fetch products with adminClient:", adminErr);
-          
-          // Fallback to regular supabase client
-          console.log("Trying regular client as fallback...");
+          console.log("Trying to fetch products with regular supabase client...");
           const { data: regularProducts, error: regularError } = await supabase
             .from('products')
             .select('*')
@@ -83,28 +68,59 @@ const Products = () => {
             
           if (regularError) {
             console.error("Regular fetch error:", regularError);
-            throw regularError;
-          }
-          
-          if (regularProducts && regularProducts.length > 0) {
+            fetchError = regularError;
+          } else if (regularProducts && regularProducts.length > 0) {
             console.log(`Successfully loaded ${regularProducts.length} products with regular client`);
             productsData = regularProducts as Product[];
           } else {
-            console.log("No products found with regular client either");
+            console.log("No products found with regular client, will try admin client");
+          }
+        } catch (regularErr) {
+          console.error("Failed to fetch products with regular client:", regularErr);
+          fetchError = regularErr;
+        }
+        
+        // If regular client didn't work, try admin client as fallback
+        if (productsData.length === 0) {
+          try {
+            console.log("Trying admin client as fallback...");
+            const { data: adminProducts, error: adminError } = await adminClient
+              .from('products')
+              .select('*')
+              .order('created_at', { ascending: false });
+              
+            if (adminError) {
+              console.error("Admin fetch error:", adminError);
+              fetchError = adminError;
+            } else if (adminProducts && adminProducts.length > 0) {
+              console.log(`Successfully loaded ${adminProducts.length} products with adminClient`);
+              productsData = adminProducts as Product[];
+            } else {
+              console.log("No products found with adminClient either");
+            }
+          } catch (adminErr) {
+            console.error("Failed to fetch products with adminClient:", adminErr);
+            fetchError = adminErr;
           }
         }
         
+        // At this point, if we have products, show them
         if (productsData.length > 0) {
           console.log("Products loaded:", productsData);
           setProducts(productsData);
           toast.success(`Loaded ${productsData.length} products`);
         } else {
           console.log("No products found in the database");
-          toast.warning("No products found. You may need to add some products in the admin dashboard.");
+          if (fetchError) {
+            setError(`Failed to load products: ${fetchError.message}`);
+            toast.error("Error loading products");
+          } else {
+            toast.warning("No products found. You may need to add some products in the admin dashboard.");
+          }
         }
         
         setLoading(false);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching products:", error);
         setError("Failed to load products. Please try again.");
         toast.error("Failed to load products");

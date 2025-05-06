@@ -23,12 +23,27 @@ export const checkIfAdmin = (): boolean => {
     if (currentUser) {
       const parsedUser = JSON.parse(currentUser);
       if (parsedUser.email === 'admin@kimcom.com' && parsedUser.role === 'admin') {
+        console.log("Admin check: Using local admin authentication");
         return true;
       }
     }
+    
+    // Only log this, don't return false as we might need to check Supabase auth too
+    console.log("Admin check: No local admin authentication found");
     return false;
   } catch (error) {
     console.error("Error checking admin status:", error);
     return false;
   }
 };
+
+// Add this function to initialize admin user if not already set
+export const initializeAdminIfNeeded = () => {
+  if (!checkIfAdmin()) {
+    console.log("Initializing admin user for development");
+    setupHardcodedAdmin();
+    return true;
+  }
+  return false;
+};
+
