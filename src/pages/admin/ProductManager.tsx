@@ -78,11 +78,15 @@ const ProductManager: React.FC = () => {
   }, []);
 
   const fetchAllProducts = async () => {
-    if (!isAdminUser && loading) return; // Don't fetch if we're not admin or still checking
+    if (!isAdminUser && loading) {
+      console.log("Skipping fetchAllProducts: isAdminUser =", isAdminUser, "loading =", loading);
+      return; // Don't fetch if we're not admin or still checking
+    }
     
     try {
       setRefreshing(true);
       const fetchedProducts = await fetchProducts();
+      console.log("Fetched products count:", fetchedProducts.length);
       setProducts(fetchedProducts);
       setRefreshing(false);
     } catch (err) {
