@@ -47,3 +47,9 @@ export const initializeAdminIfNeeded = () => {
   return false;
 };
 
+// Function to force re-initialization of admin user
+export const forceInitializeAdmin = () => {
+  console.log("Force initializing admin user for development");
+  setupHardcodedAdmin();
+  return true;
+};

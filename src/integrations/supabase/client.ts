@@ -21,7 +21,33 @@ export const supabase = createClient<Database>(
     global: {
       fetch: fetch,
       headers: { 'x-client-info': 'kimcom-security-react' },
+    },
+    // Add proper error handling for fetch operations
+    realtime: {
+      params: {
+        eventsPerSecond: 10
+      }
+    },
+    db: {
+      schema: 'public'
     }
   }
 );
 
+// Helper function to check database connection
+export const checkDatabaseConnection = async () => {
+  try {
+    const { data, error } = await supabase.from('products').select('count', { count: 'exact', head: true });
+    
+    if (error) {
+      console.error("Database connection test failed:", error);
+      return false;
+    } else {
+      console.log("Database connection test successful");
+      return true;
+    }
+  } catch (err) {
+    console.error("Database connection test exception:", err);
+    return false;
+  }
+};

@@ -3,7 +3,7 @@ import React from 'react';
 import { Product } from '@/data/productsData';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface ProductsTableProps {
   products: Product[];
@@ -11,6 +11,7 @@ interface ProductsTableProps {
   onDelete?: (id: string) => void;
   isLoading?: boolean;
   error?: string | null;
+  onRefresh?: () => void;
 }
 
 const ProductsTable: React.FC<ProductsTableProps> = ({ 
@@ -18,8 +19,14 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
   onEdit, 
   onDelete,
   isLoading = false,
-  error = null
+  error = null,
+  onRefresh
 }) => {
+  // Debug information 
+  console.log("ProductsTable rendering with products:", products);
+  console.log("Loading status:", isLoading);
+  console.log("Error status:", error);
+
   if (isLoading) {
     return (
       <div className="text-center py-8">
@@ -32,7 +39,14 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
   if (error) {
     return (
       <div className="text-center py-8">
-        <p className="text-red-500">{error}</p>
+        <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-2" />
+        <p className="text-red-500 mb-4">{error}</p>
+        {onRefresh && (
+          <Button onClick={onRefresh} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
+        )}
       </div>
     );
   }
@@ -40,13 +54,16 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
   if (!products || products.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">No products found</p>
+        <p className="text-gray-500 mb-4">No products found</p>
+        {onRefresh && (
+          <Button onClick={onRefresh} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh Products
+          </Button>
+        )}
       </div>
     );
   }
-
-  // Debug information 
-  console.log("ProductsTable rendering with products:", products);
 
   return (
     <div className="w-full overflow-auto">
@@ -77,7 +94,7 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
               </TableCell>
               <TableCell className="font-medium">{product.name}</TableCell>
               <TableCell>{product.category}</TableCell>
-              <TableCell>KSh {product.price.toLocaleString()}</TableCell>
+              <TableCell>KSh {product.price?.toLocaleString() ?? 0}</TableCell>
               <TableCell>{product.stock}</TableCell>
               <TableCell>
                 <div className="flex space-x-2">
@@ -102,4 +119,3 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
 };
 
 export default ProductsTable;
-

@@ -10,6 +10,9 @@ const initAdmin = () => {
   } else {
     console.log('Admin user already initialized');
   }
+  
+  // Ensure admin is created in session storage as well for API access
+  sessionStorage.setItem('admin_initialized', 'true');
 };
 
 // Self-invoke the function when this module is imported
