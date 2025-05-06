@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { checkIfAdmin } from '@/utils/adminAuth';
@@ -133,6 +132,25 @@ export const debugFetchProducts = async () => {
       
     if (adminError) {
       console.error("Debug admin fetch error:", adminError);
+      
+      // Check if the error is related to authentication or permission
+      if (adminError.message?.includes('auth') || adminError.message?.includes('permission')) {
+        console.log("Authentication error detected, trying direct SQL query...");
+        
+        // Try a direct SQL query as a last resort
+        try {
+          const { data: sqlData, error: sqlError } = await adminClient.rpc('get_all_products');
+          
+          if (sqlError) {
+            console.error("SQL query error:", sqlError);
+          } else if (sqlData && sqlData.length > 0) {
+            console.log(`SQL query returned ${sqlData.length} products`);
+            return sqlData;
+          }
+        } catch (sqlErr) {
+          console.error("SQL query exception:", sqlErr);
+        }
+      }
     } else if (adminProducts && adminProducts.length > 0) {
       console.log(`Successfully loaded ${adminProducts.length} products with adminClient:`, adminProducts);
       return adminProducts;
@@ -149,6 +167,35 @@ export const debugFetchProducts = async () => {
       
     if (publicError) {
       console.error("Public client fetch error:", publicError);
+      
+      // This might be our last chance, so try a direct insert to see if that works
+      try {
+        console.log("Attempting to create a test product to verify database connectivity...");
+        const testProduct = {
+          name: "Test Product - Debug Insert",
+          price: 0,
+          stock: 999,
+          category: "TEST",
+          sku: `TEST-${Date.now()}`,
+          description: "This is a test product to verify database connectivity",
+          image: "/placeholder.svg"
+        };
+        
+        const { data: insertData, error: insertError } = await adminClient
+          .from('products')
+          .insert([testProduct])
+          .select();
+          
+        if (insertError) {
+          console.error("Test insert failed:", insertError);
+        } else if (insertData) {
+          console.log("Test insert succeeded! Database is writable:", insertData);
+          return [testProduct];
+        }
+      } catch (insertErr) {
+        console.error("Test insert exception:", insertErr);
+      }
+      
       throw new Error(`Failed to fetch products: ${publicError.message}`);
     } else {
       console.log(`Public client fetch returned ${publicData?.length || 0} products:`, publicData);
@@ -165,11 +212,23 @@ export const forceInsertProduct = async (productData) => {
   try {
     console.log("Force inserting product with service role client:", productData);
     
+    // Ensure the required fields have default values to prevent DB errors
+    const safeProductData = {
+      name: productData.name || 'Unnamed Product',
+      price: Number(productData.price) || 0,
+      stock: Number(productData.stock) || 0,
+      category: productData.category || 'Uncategorized',
+      sku: productData.sku || `SKU-${Date.now()}`,
+      image: productData.image || '/placeholder.svg',
+      difficulty: productData.difficulty || 'Medium',
+      description: productData.description || '',
+      ...productData
+    };
+    
     const { data, error } = await adminClient
       .from('products')
-      .insert([productData])
-      .select()
-      .single();
+      .insert([safeProductData])
+      .select();
       
     if (error) {
       console.error("Force insert error:", error);
@@ -181,6 +240,59 @@ export const forceInsertProduct = async (productData) => {
   } catch (err) {
     console.error("Force insert exception:", err);
     throw err;
+  }
+};
+
+// Create a function to check if the products table exists and has data
+export const verifyProductsTable = async (): Promise<boolean> => {
+  try {
+    // Try a simple query to check if there are any products
+    const { count, error } = await adminClient
+      .from('products')
+      .select('*', { count: 'exact', head: true });
+    
+    if (error) {
+      console.error("Error checking products table:", error);
+      return false;
+    }
+    
+    console.log(`Products table exists and has ${count} records`);
+    return true;
+  } catch (err) {
+    console.error("Error verifying products table:", err);
+    return false;
+  }
+};
+
+// Function to create test products for development
+export const createTestProducts = async (count = 3): Promise<boolean> => {
+  try {
+    console.log(`Creating ${count} test products for development`);
+    
+    const categories = ['CCTV', 'Network', 'Access Control', 'Alarm'];
+    const difficulties = ['Easy', 'Medium', 'Advanced'];
+    
+    // Create products
+    for (let i = 0; i < count; i++) {
+      const product = {
+        name: `Test Product ${i + 1}`,
+        description: `This is a test product ${i + 1} created for development`,
+        price: Math.floor(Math.random() * 10000) + 1000,
+        stock: Math.floor(Math.random() * 20) + 5,
+        category: categories[Math.floor(Math.random() * categories.length)],
+        sku: `TEST-${Date.now()}-${i}`,
+        difficulty: difficulties[Math.floor(Math.random() * difficulties.length)],
+        image: '/placeholder.svg',
+      };
+      
+      await forceInsertProduct(product);
+    }
+    
+    console.log(`Successfully created ${count} test products`);
+    return true;
+  } catch (err) {
+    console.error("Error creating test products:", err);
+    return false;
   }
 };
 

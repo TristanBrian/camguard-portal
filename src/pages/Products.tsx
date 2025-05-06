@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import ProductDetailPopup from '@/components/ProductDetailPopup';
-import ProductsTable from '@/components/ProductsTable'; // Import ProductsTable for better display
+import ProductsTable from '@/components/ProductsTable'; 
 import { Button } from '@/components/ui/button';
 import { 
   ArrowLeft, 
@@ -15,7 +16,8 @@ import {
   ShoppingCart,
   Trash2,
   MinusCircle,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
@@ -26,8 +28,23 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { 
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter
+} from "@/components/ui/card";
 import { supabase } from '@/integrations/supabase/client';
-import { adminClient, ensureAdminAuth, debugFetchProducts } from '@/integrations/supabase/adminClient';
+import { 
+  adminClient, 
+  ensureAdminAuth, 
+  debugFetchProducts, 
+  forceInsertProduct,
+  createTestProducts,
+  verifyProductsTable
+} from '@/integrations/supabase/adminClient';
 import { initializeAdminIfNeeded } from '@/utils/adminAuth';
 
 const Products = () => {
@@ -44,6 +61,8 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [isCreatingTestProducts, setIsCreatingTestProducts] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
   
   // Ensure we have an admin user for development
   initializeAdminIfNeeded();
@@ -56,47 +75,38 @@ const Products = () => {
         setError(null);
         console.log("Fetching products for display page...");
         
+        // Verify products table exists
+        await verifyProductsTable();
+        
         let productsData: Product[] = [];
         let fetchError = null;
         
-        // First try fetching with the regular client since RLS should allow public read access
+        // Try multiple fetching strategies
         try {
-          console.log("Trying to fetch products with regular supabase client...");
-          const { data: regularProducts, error: regularError } = await supabase
-            .from('products')
-            .select('*')
-            .order('created_at', { ascending: false });
-            
-          if (regularError) {
-            console.error("Regular fetch error:", regularError);
-            fetchError = regularError;
-          } else if (regularProducts && regularProducts.length > 0) {
-            console.log(`Successfully loaded ${regularProducts.length} products with regular client`);
-            productsData = regularProducts as Product[];
+          console.log("Fetching products with debugFetchProducts...");
+          productsData = await debugFetchProducts() as Product[];
+          
+          if (productsData && productsData.length > 0) {
+            console.log(`Successfully loaded ${productsData.length} products`);
           } else {
-            console.log("No products found with regular client, will try admin client");
-          }
-        } catch (regularErr) {
-          console.error("Failed to fetch products with regular client:", regularErr);
-          fetchError = regularErr;
-        }
-        
-        // If regular client didn't work or returned no products, try admin client as fallback
-        if (productsData.length === 0) {
-          try {
-            console.log("Trying admin client as fallback...");
-            const adminProducts = await debugFetchProducts();
+            console.log("No products found via debugFetchProducts, trying direct method");
+            
+            // Try direct fetch as a last resort
+            const { data: directProducts, error: directError } = await adminClient
+              .from('products')
+              .select('*');
               
-            if (adminProducts && adminProducts.length > 0) {
-              console.log(`Successfully loaded ${adminProducts.length} products with adminClient`);
-              productsData = adminProducts as Product[];
-            } else {
-              console.log("No products found with adminClient either");
+            if (directError) {
+              console.error("Direct fetch error:", directError);
+              fetchError = directError;
+            } else if (directProducts && directProducts.length > 0) {
+              console.log(`Successfully loaded ${directProducts.length} products with direct fetch`);
+              productsData = directProducts as Product[];
             }
-          } catch (adminErr) {
-            console.error("Failed to fetch products with adminClient:", adminErr);
-            fetchError = adminErr;
           }
+        } catch (err) {
+          console.error("Error fetching products:", err);
+          fetchError = err;
         }
         
         // At this point, if we have products, show them
@@ -107,7 +117,7 @@ const Products = () => {
         } else {
           console.log("No products found in the database");
           if (fetchError) {
-            setError(`Failed to load products: ${fetchError.message}`);
+            setError(`Failed to load products: ${fetchError.message || 'Unknown error'}`);
             toast.error("Error loading products");
           } else {
             toast.warning("No products found. You may need to add some products in the admin dashboard.");
@@ -339,6 +349,27 @@ const Products = () => {
     navigate('/admin/products');
   };
 
+  const handleCreateTestProducts = async () => {
+    if (isCreatingTestProducts) return;
+    
+    try {
+      setIsCreatingTestProducts(true);
+      const success = await createTestProducts(3);
+      
+      if (success) {
+        toast.success("Test products created successfully");
+        handleRefreshProducts();
+      } else {
+        toast.error("Failed to create test products");
+      }
+    } catch (error) {
+      console.error("Error creating test products:", error);
+      toast.error("Error creating test products");
+    } finally {
+      setIsCreatingTestProducts(false);
+    }
+  };
+
   // Check if the user is an admin
   const [isAdmin, setIsAdmin] = useState(false);
   
@@ -430,6 +461,22 @@ const Products = () => {
                   </Button>
                 )}
                 
+                <Button
+                  variant="outline"
+                  className="bg-green-100 hover:bg-green-200 text-green-800 border-green-300"
+                  onClick={handleCreateTestProducts}
+                  disabled={isCreatingTestProducts || loading}
+                >
+                  {isCreatingTestProducts ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>Create Test Products</>
+                  )}
+                </Button>
+                
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -438,6 +485,14 @@ const Products = () => {
                 >
                   <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                   Refresh
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDebugMode(!debugMode)}
+                >
+                  {debugMode ? "Hide Debug Info" : "Debug Mode"}
                 </Button>
                 
                 <Popover open={isCartOpen} onOpenChange={setIsCartOpen}>
@@ -556,6 +611,61 @@ const Products = () => {
               </div>
             </div>
 
+            {debugMode && (
+              <Card className="mb-8 bg-gray-50 border border-amber-300">
+                <CardHeader className="py-2">
+                  <CardTitle className="text-amber-800 flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    Debug Information
+                  </CardTitle>
+                  <CardDescription>Technical details about the current state</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="overflow-auto max-h-40 bg-gray-900 text-gray-100 p-4 text-xs font-mono rounded">
+                    <pre>{JSON.stringify({
+                      productsCount: products.length,
+                      filteredCount: filteredProducts.length,
+                      loading,
+                      error,
+                      retryCount,
+                      categories,
+                      isAdmin,
+                      isLoggedIn,
+                    }, null, 2)}</pre>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="bg-blue-100 text-blue-800 border-blue-300"
+                      onClick={handleRefreshProducts}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                      Refresh Products
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="bg-amber-100 text-amber-800 border-amber-300"
+                      onClick={() => navigate('/admin/products')}
+                    >
+                      Go To Admin
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="bg-green-100 text-green-800 border-green-300"
+                      onClick={handleCreateTestProducts}
+                      disabled={isCreatingTestProducts}
+                    >
+                      {isCreatingTestProducts ? 'Creating...' : 'Create Test Products'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {loading ? (
               <div className="flex justify-center items-center py-12">
                 <div className="animate-spin h-10 w-10 border-4 border-kimcom-600 border-t-transparent rounded-full"></div>
@@ -570,21 +680,60 @@ const Products = () => {
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Try Again
                 </Button>
+                
+                {debugMode && (
+                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded max-w-2xl mx-auto">
+                    <h3 className="font-semibold text-red-800 mb-2">Troubleshooting Tips:</h3>
+                    <ul className="list-disc pl-5 text-left text-sm text-red-700 space-y-1">
+                      <li>Check that your database connection is working properly</li>
+                      <li>Verify that the products table exists and has data</li>
+                      <li>Try creating test products using the button above</li>
+                      <li>Check the console logs for more detailed error information</li>
+                      <li>Verify that Row Level Security (RLS) policies are set correctly</li>
+                    </ul>
+                    
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-4 bg-green-100 text-green-800"
+                      onClick={handleCreateTestProducts}
+                    >
+                      Create Test Products
+                    </Button>
+                  </div>
+                )}
               </div>
             ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-500 text-lg mb-4">
                   {products.length === 0 
-                    ? "No products found in the database. Please add some products in the admin dashboard." 
+                    ? "No products found in the database. Please add some products in the admin dashboard or create test products." 
                     : "No products found matching your search."}
                 </p>
-                {products.length === 0 && isAdmin && (
-                  <Button 
-                    className="bg-kimcom-600 hover:bg-kimcom-700 mt-2"
-                    onClick={handleGoToAdmin}
-                  >
-                    Go to Admin Dashboard
-                  </Button>
+                {products.length === 0 && (
+                  <div className="flex flex-col items-center gap-4 mt-4">
+                    <Button 
+                      className="bg-kimcom-600 hover:bg-kimcom-700"
+                      onClick={handleCreateTestProducts}
+                      disabled={isCreatingTestProducts}
+                    >
+                      {isCreatingTestProducts ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Creating Test Products...
+                        </>
+                      ) : (
+                        <>Create Test Products</>
+                      )}
+                    </Button>
+                    
+                    <Button 
+                      variant="outline"
+                      onClick={handleGoToAdmin}
+                    >
+                      Go to Admin Dashboard
+                    </Button>
+                  </div>
                 )}
                 {products.length > 0 && (
                   <Button 
