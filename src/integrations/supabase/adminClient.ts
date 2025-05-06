@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -54,29 +53,38 @@ export const ensureAdminAuth = async () => {
   return true;
 };
 
-// Create a storage bucket if it doesn't exist
+// Create a storage bucket if it doesn't exist using edge function
 export const createStorageBucket = async (bucketName: string, isPublic = true) => {
   try {
-    // First check if bucket exists
-    const { data: buckets } = await adminClient.storage.listBuckets();
-    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
+    // First check if we have the gallery bucket via REST API
+    try {
+      const { data, error } = await adminClient.storage.getBucket(bucketName);
+      if (!error && data) {
+        console.log(`Bucket ${bucketName} already exists`);
+        return true;
+      }
+    } catch (err) {
+      // Bucket doesn't exist, we'll create it
+      console.log(`Bucket ${bucketName} does not exist, creating...`);
+    }
     
-    if (!bucketExists) {
-      try {
-        const { error } = await adminClient.storage.createBucket(bucketName, {
-          public: isPublic
-        });
-        
-        if (error) {
-          console.error("Error creating bucket directly:", error);
-          return false;
-        }
-      } catch (directErr) {
-        console.error("Exception creating bucket directly:", directErr);
+    // Call our edge function to create the bucket (this works around storage API issues)
+    try {
+      const { data, error } = await adminClient.functions.invoke("create-bucket", {
+        body: { bucketName },
+      });
+      
+      if (error) {
+        console.error("Error creating bucket via edge function:", error);
         return false;
       }
+      
+      console.log("Edge function response:", data);
+      return true;
+    } catch (edgeFuncErr) {
+      console.error("Error calling edge function:", edgeFuncErr);
+      return false;
     }
-    return true;
   } catch (err) {
     console.error("Error in createStorageBucket:", err);
     return false;

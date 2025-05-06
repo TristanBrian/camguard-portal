@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { adminClient, ensureAdminAuth, createStorageBucket } from "@/integrations/supabase/adminClient";
 import type { Product } from "@/data/productsData";
@@ -216,10 +215,11 @@ export async function uploadProductImage(file: File, fileName: string): Promise<
     // Sanitize file name to prevent path issues
     const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
     
-    // Ensure gallery bucket exists before upload
+    // Ensure gallery bucket exists before upload (now using edge function)
     const bucketCreated = await createStorageBucket('gallery', true);
     if (!bucketCreated) {
-      console.warn("Couldn't ensure gallery bucket exists, but will try upload anyway");
+      console.warn("Couldn't ensure gallery bucket exists, will use placeholders instead");
+      return "/placeholder.svg";
     }
     
     // Attempt upload with better error handling using admin client with explicit auth
@@ -324,11 +324,11 @@ export async function addToProductGallery(productId: string, imageUrls: string[]
 }
 
 /**
- * Setup Storage Bucket - Using admin client to bypass RLS
+ * Setup Storage Bucket - Using edge function instead of direct API
  */
 export async function setupStorageBucket() {
   try {
-    console.log("Setting up storage bucket...");
+    console.log("Setting up storage bucket via edge function...");
     
     return await createStorageBucket('gallery', true);
   } catch (error) {

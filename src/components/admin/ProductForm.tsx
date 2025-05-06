@@ -49,6 +49,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const [galleryImages, setGalleryImages] = useState<FileList | null>(null);
   const [galleryPreviewUrls, setGalleryPreviewUrls] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [skipImageUpload, setSkipImageUpload] = useState(false);
   
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -66,6 +67,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
       };
       reader.readAsDataURL(file);
       setImage(file);
+      setSkipImageUpload(false);
     }
   };
   
@@ -129,13 +131,22 @@ const ProductForm: React.FC<ProductFormProps> = ({
         description,
         sku,
         stock: stock || 0,
-        image,
-        imageUrl: initialData?.image, // Keep original image if no new one uploaded
         brand,
         model,
         features,
         difficulty,
       };
+      
+      // If image upload is skipped, use placeholder directly
+      if (skipImageUpload) {
+        productData.image = '/placeholder.svg';
+      } else if (image) {
+        // Only include the file if we're not skipping upload
+        productData.image = image;
+      } else if (initialData?.image) {
+        // Keep original image if no new one uploaded
+        productData.imageUrl = initialData.image;
+      }
       
       // Add gallery images if available
       if (galleryImages) {
@@ -315,11 +326,25 @@ const ProductForm: React.FC<ProductFormProps> = ({
               <div>
                 <div className="mb-2">
                   <Label htmlFor="main-image">Main Product Image</Label>
+                  <div className="flex items-center mt-1">
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSkipImageUpload(!skipImageUpload);
+                        toast.info(skipImageUpload ? "Image upload enabled" : "Using placeholder image");
+                      }}
+                      className={`text-xs ${skipImageUpload ? 'bg-amber-100' : ''}`}
+                    >
+                      {skipImageUpload ? "Using placeholder" : "Skip image upload"}
+                    </Button>
+                  </div>
                 </div>
                 <div className="border rounded-md p-4">
                   <div className="flex flex-col items-center mb-4">
                     <img
-                      src={previewUrl}
+                      src={skipImageUpload ? '/placeholder.svg' : previewUrl}
                       alt="Product preview"
                       className="w-36 h-36 object-contain border rounded mb-4"
                       onError={(e) => {
@@ -329,7 +354,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                     />
                     <Label 
                       htmlFor="main-image" 
-                      className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded flex items-center"
+                      className={`cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded flex items-center ${skipImageUpload ? 'opacity-50' : ''}`}
                     >
                       <Upload className="mr-2 h-4 w-4" />
                       Select File
@@ -339,6 +364,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                         className="hidden"
                         onChange={handleImageChange}
                         accept="image/*"
+                        disabled={skipImageUpload}
                       />
                     </Label>
                   </div>
