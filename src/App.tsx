@@ -1,7 +1,6 @@
 
 import { Routes, Route } from 'react-router-dom';
 import './App.css';
-import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Index from './pages/Index';
 import Products from './pages/Products';
@@ -17,11 +16,11 @@ import AdminLogin from './pages/AdminLogin';
 import ProductManager from './pages/admin/ProductManager';
 import Statistics from './pages/admin/Statistics';
 import MarketTrends from './pages/admin/MarketTrends';
+import Login from './pages/Login';
 
 function App() {
   return (
     <div className="flex flex-col min-h-screen">
-      <Navbar />
       <main className="flex-grow">
         <Routes>
           <Route path="/" element={<Index />} />
@@ -32,6 +31,7 @@ function App() {
           <Route path="/product-details/:id" element={<ProductDetails />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/products" element={<ProductManager />} />

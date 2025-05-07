@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -22,17 +22,18 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Mock user database (in a real app, this would be a backend service)
-  const [users, setUsers] = useState(() => {
+  // Get existing users from localStorage
+  const getUsers = () => {
     const savedUsers = localStorage.getItem('kimcom_users');
     return savedUsers ? JSON.parse(savedUsers) : [];
-  });
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
     setTimeout(() => {
+      const users = getUsers();
       const user = users.find((u: any) => u.email === email && u.password === password);
       
       if (user) {
@@ -57,6 +58,7 @@ const Login: React.FC = () => {
       return;
     }
 
+    const users = getUsers();
     // Check if user already exists
     if (users.some((user: any) => user.email === registerEmail)) {
       toast.error('Email already in use');
@@ -74,7 +76,6 @@ const Login: React.FC = () => {
       };
       
       const updatedUsers = [...users, newUser];
-      setUsers(updatedUsers);
       localStorage.setItem('kimcom_users', JSON.stringify(updatedUsers));
       localStorage.setItem('kimcom_current_user', JSON.stringify(newUser));
       

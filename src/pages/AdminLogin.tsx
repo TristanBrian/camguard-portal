@@ -15,47 +15,26 @@ const AdminLogin: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Check if user is already authenticated on mount
-  useEffect(() => {
-    const checkAuth = async () => {
-      // First check localStorage
-      if (checkIfAdmin()) {
-        navigate('/admin');
-        return;
-      }
-      
-      // Then check Supabase auth
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const hasRole = await isAdmin();
-        if (hasRole) {
-          navigate('/admin');
-        }
-      }
-    };
-    checkAuth();
-  }, [navigate]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // First check for hardcoded admin email/password
-    if (email.trim().toLowerCase() === "admin@kimcom.com" && password === "admin123") {
-      toast.success('Admin login successful');
-      // Store admin info in localStorage for persistence
-      localStorage.setItem('kimcom_current_user', JSON.stringify({
-        id: 'admin-hardcoded',
-        email: 'admin@kimcom.com',
-        role: 'admin'
-      }));
-      navigate('/admin');
-      setLoading(false);
-      return;
-    }
-
-    // Otherwise, try Supabase sign in
     try {
+      // First check for hardcoded admin email/password
+      if (email.trim().toLowerCase() === "admin@kimcom.com" && password === "admin123") {
+        toast.success('Admin login successful');
+        // Store admin info in localStorage for persistence
+        localStorage.setItem('kimcom_current_user', JSON.stringify({
+          id: 'admin-hardcoded',
+          email: 'admin@kimcom.com',
+          role: 'admin'
+        }));
+        navigate('/admin');
+        setLoading(false);
+        return;
+      }
+
+      // Otherwise, try Supabase sign in
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
