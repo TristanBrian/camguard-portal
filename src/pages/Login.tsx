@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { User, Lock, Mail, UserCircle2 } from 'lucide-react';
-import Navbar from '@/components/Navbar';
 
 const Login: React.FC = () => {
   // Login state
@@ -87,7 +86,6 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Navbar />
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="bg-white shadow-md rounded-lg border border-gray-200 p-6">
