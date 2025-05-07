@@ -18,6 +18,7 @@ import ProductManager from './pages/admin/ProductManager';
 import Statistics from './pages/admin/Statistics';
 import MarketTrends from './pages/admin/MarketTrends';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/products" element={<ProductManager />} />
