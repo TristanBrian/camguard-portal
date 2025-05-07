@@ -14,6 +14,8 @@ import Checkout from './pages/Checkout';
 import Admin from './pages/Admin';
 import AdminLogin from './pages/AdminLogin';
 import ProductManager from './pages/admin/ProductManager';
+import Statistics from './pages/admin/Statistics';
+import MarketTrends from './pages/admin/MarketTrends';
 
 function App() {
   return (
@@ -27,11 +29,11 @@ function App() {
       <Route path="/cart" element={<Cart />} />
       <Route path="/checkout" element={<Checkout />} />
       <Route path="/admin-login" element={<AdminLogin />} />
-      <Route path="/admin" element={<Admin />}>
-        <Route index element={<Admin />} />
-        <Route path="products" element={<ProductManager />} />
-        <Route path="products/edit/:id" element={<ProductManager />} />
-      </Route>
+      <Route path="/admin" element={<Admin />} />
+      <Route path="/admin/products" element={<ProductManager />} />
+      <Route path="/admin/products/edit/:id" element={<ProductManager />} />
+      <Route path="/admin/statistics" element={<Statistics />} />
+      <Route path="/admin/market-trends" element={<MarketTrends />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

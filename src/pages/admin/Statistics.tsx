@@ -1,264 +1,121 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import InventoryStatistics from '@/components/admin/InventoryStatistics';
+import React, { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart2, Package, AlertCircle, DollarSign } from 'lucide-react';
 import { getProductStats } from '@/integrations/supabase/admin';
-import { Badge } from '@/components/ui/badge';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
-  ResponsiveContainer, PieChart, Pie, Cell 
-} from 'recharts';
+import { toast } from 'sonner';
 
-const Statistics: React.FC = () => {
+const Statistics = () => {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const loadStats = async () => {
       try {
-        const productStats = await getProductStats();
-        setStats(productStats);
-      } catch (error) {
-        console.error("Error fetching product statistics:", error);
+        setLoading(true);
+        const data = await getProductStats();
+        setStats(data);
+      } catch (err) {
+        console.error("Error loading stats:", err);
+        setError("Failed to load statistics");
+        toast.error("Error loading statistics");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStats();
+    loadStats();
   }, []);
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
-
-  const prepareCategoryData = () => {
-    if (!stats?.categoryCounts) return [];
-    
-    return Object.keys(stats.categoryCounts).map((category) => ({
-      name: category,
-      count: stats.categoryCounts[category],
-      value: stats.categoryValue[category],
-    }));
-  };
-
-  const prepareDifficultyData = () => {
-    if (!stats?.difficultyBreakdown) return [];
-    
-    return Object.keys(stats.difficultyBreakdown).map((difficulty) => ({
-      name: difficulty,
-      value: stats.difficultyBreakdown[difficulty],
-    }));
-  };
-
-  const prepareBrandData = () => {
-    if (!stats?.brandCounts) return [];
-    
-    return Object.keys(stats.brandCounts).map((brand) => ({
-      name: brand,
-      value: stats.brandCounts[brand],
-    }));
-  };
+  // Transform category counts for chart display
+  const categoryChartData = stats?.categoryCounts ? 
+    Object.entries(stats.categoryCounts).map(([name, value]) => ({ 
+      name, 
+      value 
+    })) : [];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Statistics Dashboard</h1>
-      </div>
-      
-      <Tabs defaultValue="inventory" className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="inventory">Inventory</TabsTrigger>
-          <TabsTrigger value="sales">Sales</TabsTrigger>
-          <TabsTrigger value="website">Website</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="inventory">
-          {loading ? (
+      <h2 className="text-2xl font-bold">Statistics</h2>
+
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="inline-block animate-spin h-8 w-8 border-4 border-kimcom-600 border-t-transparent rounded-full"></div>
+          <p className="mt-2 text-gray-500">Loading statistics...</p>
+        </div>
+      ) : error ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <p className="text-lg text-red-500">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
-              <CardContent className="h-96 flex items-center justify-center">
-                <div className="animate-spin h-8 w-8 border-4 border-kimcom-600 border-t-transparent rounded-full"></div>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats?.totalProducts || 0}</div>
               </CardContent>
             </Card>
-          ) : (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-gray-500">Total Products</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-bold">{stats?.totalProducts || 0}</p>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-gray-500">Total Inventory Value</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-bold">KSh {stats?.totalValue?.toLocaleString() || 0}</p>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-gray-500">Total Stock</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-bold">{stats?.totalStock || 0}</p>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-gray-500">Stock Status</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Badge variant="destructive" className="px-2 py-1">
-                          Out of Stock
-                        </Badge>
-                        <span className="font-bold">{stats?.outOfStockCount || 0}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="px-2 py-1 bg-amber-100 text-amber-700 border-amber-300">
-                          Low Stock
-                        </Badge>
-                        <span className="font-bold">{stats?.lowStockCount || 0}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Products by Category</CardTitle>
-                  </CardHeader>
-                  <CardContent className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={prepareCategoryData()}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="count" fill="#8884d8" name="Product Count" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Installation Difficulty</CardTitle>
-                  </CardHeader>
-                  <CardContent className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={prepareDifficultyData()}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          paddingAngle={5}
-                          dataKey="value"
-                          label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        >
-                          {prepareDifficultyData().map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Value Distribution by Category</CardTitle>
-                  </CardHeader>
-                  <CardContent className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={prepareCategoryData()}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} />
-                        <YAxis />
-                        <Tooltip formatter={(value) => [`KSh ${value.toLocaleString()}`, 'Value']} />
-                        <Legend />
-                        <Bar dataKey="value" fill="#82ca9d" name="Inventory Value" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Products by Brand</CardTitle>
-                  </CardHeader>
-                  <CardContent className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={prepareBrandData()}
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                          label={({name, value}) => `${name}: ${value}`}
-                        >
-                          {prepareBrandData().map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              <InventoryStatistics />
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="sales">
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Inventory Value</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">KSh {stats?.totalValue?.toLocaleString() || 0}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Low Stock Products</CardTitle>
+                <AlertCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats?.lowStockProducts || 0}</div>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card>
             <CardHeader>
-              <CardTitle>Sales Analytics</CardTitle>
+              <CardTitle className="flex items-center">
+                <BarChart2 className="h-5 w-5 mr-2" />
+                Products by Category
+              </CardTitle>
             </CardHeader>
-            <CardContent className="h-96 flex items-center justify-center">
-              <p className="text-gray-500">Sales analytics will be implemented in a future update.</p>
+            <CardContent>
+              {categoryChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={categoryChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="value" name="Count" fill="#4f46e5" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-center py-12">
+                  <p>No category data available</p>
+                </div>
+              )}
             </CardContent>
           </Card>
-        </TabsContent>
-        
-        <TabsContent value="website">
-          <Card>
-            <CardHeader>
-              <CardTitle>Website Analytics</CardTitle>
-            </CardHeader>
-            <CardContent className="h-96 flex items-center justify-center">
-              <p className="text-gray-500">Website analytics will be implemented in a future update.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        </>
+      )}
     </div>
   );
 };
