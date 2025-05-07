@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -11,16 +11,65 @@ const ResetPassword: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [hashParams, setHashParams] = useState<URLSearchParams | null>(null);
+  const [validSession, setValidSession] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     // Extract the hash parameters from the URL
     const hash = window.location.hash.substring(1);
     if (hash) {
-      setHashParams(new URLSearchParams(hash));
+      const hashParams = new URLSearchParams(hash);
+      const type = hashParams.get('type');
+      const access_token = hashParams.get('access_token');
+      
+      if (type === 'recovery' && access_token) {
+        // Verify the recovery token
+        const verifyToken = async () => {
+          try {
+            const { data, error } = await supabase.auth.setSession({
+              access_token,
+              refresh_token: access_token,
+            });
+            
+            if (error) {
+              toast.error('Invalid or expired recovery link');
+              console.error('Error setting session:', error);
+              setTimeout(() => navigate('/login'), 2000);
+            } else {
+              console.log('Valid recovery session established', data);
+              setValidSession(true);
+            }
+          } catch (error: any) {
+            console.error('Exception during token verification:', error);
+            toast.error('Failed to process recovery link');
+            setTimeout(() => navigate('/login'), 2000);
+          }
+        };
+        
+        verifyToken();
+      } else {
+        console.log('Missing required hash parameters', { type, access_token });
+        toast.error('Invalid recovery link format');
+        setTimeout(() => navigate('/login'), 2000);
+      }
+    } else {
+      // If no hash parameters, check if user has a valid session already
+      const checkExistingSession = async () => {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session) {
+          console.log('User already has an active session');
+          setValidSession(true);
+        } else {
+          console.log('No recovery parameters found and no active session');
+          toast.error('Please use the reset link from your email');
+          setTimeout(() => navigate('/login'), 2000);
+        }
+      };
+      
+      checkExistingSession();
     }
-  }, []);
+  }, [navigate]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +88,7 @@ const ResetPassword: React.FC = () => {
     
     try {
       // Update password via Supabase
-      const { error } = await supabase.auth.updateUser({
+      const { data, error } = await supabase.auth.updateUser({
         password: password
       });
       
@@ -47,6 +96,7 @@ const ResetPassword: React.FC = () => {
         throw error;
       }
       
+      console.log('Password updated successfully:', data);
       toast.success('Password has been reset successfully');
       
       // Redirect to login after a short delay
@@ -61,38 +111,6 @@ const ResetPassword: React.FC = () => {
     }
   };
 
-  // Function to handle resetting with hash parameters
-  // This is needed for when users come from the email link
-  useEffect(() => {
-    const processHashParams = async () => {
-      if (hashParams) {
-        const type = hashParams.get('type');
-        const access_token = hashParams.get('access_token');
-        
-        if (type === 'recovery' && access_token) {
-          // Set the session with the recovery token
-          try {
-            const { error } = await supabase.auth.setSession({
-              access_token,
-              refresh_token: access_token,
-            });
-            
-            if (error) {
-              toast.error('Invalid or expired recovery link');
-              setTimeout(() => navigate('/login'), 2000);
-            }
-          } catch (error: any) {
-            console.error('Error setting session:', error);
-            toast.error('Failed to process recovery link');
-            setTimeout(() => navigate('/login'), 2000);
-          }
-        }
-      }
-    };
-    
-    processHashParams();
-  }, [hashParams, navigate]);
-
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <div className="flex-1 flex items-center justify-center p-4">
@@ -106,53 +124,59 @@ const ResetPassword: React.FC = () => {
             
             <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">Reset Your Password</h2>
             
-            <form onSubmit={handleResetPassword}>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-gray-400" />
+            {validSession ? (
+              <form onSubmit={handleResetPassword}>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="pl-10 w-full"
+                        placeholder="Enter new password"
+                        required
+                      />
                     </div>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 w-full"
-                      placeholder="Enter new password"
-                      required
-                    />
                   </div>
-                </div>
-                
-                <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-gray-400" />
+                  
+                  <div>
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="pl-10 w-full"
+                        placeholder="Confirm new password"
+                        required
+                      />
                     </div>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="pl-10 w-full"
-                      placeholder="Confirm new password"
-                      required
-                    />
                   </div>
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-kimcom-600 hover:bg-kimcom-700"
+                    disabled={loading}
+                  >
+                    {loading ? 'Resetting...' : 'Reset Password'}
+                  </Button>
                 </div>
-                
-                <Button 
-                  type="submit" 
-                  className="w-full bg-kimcom-600 hover:bg-kimcom-700"
-                  disabled={loading}
-                >
-                  {loading ? 'Resetting...' : 'Reset Password'}
-                </Button>
+              </form>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-gray-600">Verifying your reset link...</p>
               </div>
-            </form>
+            )}
           </div>
         </div>
       </div>

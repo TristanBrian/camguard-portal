@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { User, Lock, Mail, UserCircle2, ArrowLeft } from 'lucide-react';
+import { User, Lock, Mail, UserCircle2, ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 
 const Login: React.FC = () => {
@@ -27,32 +27,31 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Get existing users from localStorage
-  const getUsers = () => {
-    const savedUsers = localStorage.getItem('kimcom_users');
-    return savedUsers ? JSON.parse(savedUsers) : [];
-  };
-
-  const handleLogin = (e: React.FormEvent) => {
+  // Login with Supabase
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
-    setTimeout(() => {
-      const users = getUsers();
-      const user = users.find((u: any) => u.email === email && u.password === password);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      if (user) {
-        toast.success('Login successful');
-        localStorage.setItem('kimcom_current_user', JSON.stringify(user));
-        navigate('/');
-      } else {
-        toast.error('Invalid credentials');
-      }
+      if (error) throw error;
+      
+      toast.success('Login successful');
+      navigate('/');
+    } catch (error: any) {
+      toast.error(error.message || 'Invalid credentials');
+      console.error('Login error:', error);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  // Register with Supabase
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
@@ -63,31 +62,33 @@ const Login: React.FC = () => {
       return;
     }
 
-    const users = getUsers();
-    // Check if user already exists
-    if (users.some((user: any) => user.email === registerEmail)) {
-      toast.error('Email already in use');
+    if (registerPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
       setLoading(false);
       return;
     }
     
-    setTimeout(() => {
-      const newUser = {
-        id: Date.now(),
-        fullName,
+    try {
+      const { data, error } = await supabase.auth.signUp({
         email: registerEmail,
         password: registerPassword,
-        role: 'customer'
-      };
+        options: {
+          data: {
+            full_name: fullName
+          }
+        }
+      });
       
-      const updatedUsers = [...users, newUser];
-      localStorage.setItem('kimcom_users', JSON.stringify(updatedUsers));
-      localStorage.setItem('kimcom_current_user', JSON.stringify(newUser));
+      if (error) throw error;
       
-      toast.success('Account created successfully');
+      toast.success('Account created successfully. Check your email for verification.');
       navigate('/');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create account');
+      console.error('Register error:', error);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -95,15 +96,21 @@ const Login: React.FC = () => {
     setLoading(true);
     
     try {
+      // Get the current site URL for the redirect
+      const origin = window.location.origin;
+      const redirectTo = `${origin}/reset-password`;
+      console.log('Reset password redirect URL:', redirectTo);
+      
       // Use Supabase password reset functionality
       const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: redirectTo,
       });
       
       if (error) {
         throw error;
       }
       
+      console.log('Password reset email sent successfully');
       setResetSent(true);
       toast.success('Password reset instructions sent to your email');
     } catch (error: any) {
@@ -184,7 +191,12 @@ const Login: React.FC = () => {
                       className="w-full bg-kimcom-600 hover:bg-kimcom-700"
                       disabled={loading}
                     >
-                      {loading ? 'Sending...' : 'Reset Password'}
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : 'Reset Password'}
                     </Button>
                   </div>
                 </form>
@@ -271,7 +283,12 @@ const Login: React.FC = () => {
                       className="w-full bg-kimcom-600 hover:bg-kimcom-700"
                       disabled={loading}
                     >
-                      {loading ? 'Logging in...' : 'Login'}
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Logging in...
+                        </>
+                      ) : 'Login'}
                     </Button>
                   </div>
                 </form>
@@ -357,7 +374,12 @@ const Login: React.FC = () => {
                       className="w-full bg-kimcom-600 hover:bg-kimcom-700"
                       disabled={loading}
                     >
-                      {loading ? 'Creating Account...' : 'Create Account'}
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating Account...
+                        </>
+                      ) : 'Create Account'}
                     </Button>
                   </div>
                 </form>
