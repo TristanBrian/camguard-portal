@@ -43,21 +43,19 @@ export const fetchProducts = async (): Promise<Product[]> => {
     const productsData = await debugFetchProducts();
     
     // Ensure products conform to the Product type
-    const typedProducts: Product[] = productsData.map((product: any) => {
-      return {
-        id: product.id || crypto.randomUUID(),
-        name: product.name,
-        price: Number(product.price),
-        stock: Number(product.stock),
-        category: product.category,
-        sku: product.sku || '',
-        description: product.description || '',
-        image: product.image || '/placeholder.svg',
-        difficulty: (product.difficulty as 'Easy' | 'Medium' | 'Advanced') || 'Medium',
-        brand: product.brand || '',
-        model: product.model || ''
-      };
-    });
+    const typedProducts: Product[] = productsData.map((product: any) => ({
+      id: product.id || crypto.randomUUID(),
+      name: product.name,
+      price: Number(product.price),
+      stock: Number(product.stock),
+      category: product.category,
+      sku: product.sku || '',
+      description: product.description || '',
+      image: product.image || '/placeholder.svg',
+      difficulty: (product.difficulty as 'Easy' | 'Medium' | 'Advanced') || 'Medium',
+      brand: product.brand || '',
+      model: product.model || ''
+    }));
     
     return typedProducts;
   } catch (error) {
