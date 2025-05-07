@@ -114,6 +114,17 @@ export const addProduct = async (productData: any) => {
       throw new Error("Admin authentication required");
     }
     
+    // Ensure features is an array if provided
+    if (productData.features && !Array.isArray(productData.features)) {
+      if (typeof productData.features === 'string') {
+        productData.features = productData.features
+          .split('\n')
+          .filter((line: string) => line.trim() !== '');
+      } else {
+        productData.features = [];
+      }
+    }
+    
     // Try with regular supabase client first
     try {
       const { data, error } = await supabase
@@ -161,6 +172,18 @@ export const deleteProduct = async (productId: string) => {
 export const updateProduct = async (productId: string, productData: any) => {
   try {
     console.log("Updating product:", productId, productData);
+    
+    // Ensure features is an array if provided
+    if (productData.features && !Array.isArray(productData.features)) {
+      if (typeof productData.features === 'string') {
+        productData.features = productData.features
+          .split('\n')
+          .filter((line: string) => line.trim() !== '');
+      } else {
+        productData.features = [];
+      }
+    }
+    
     const { data, error } = await adminClient
       .from('products')
       .update(productData)
