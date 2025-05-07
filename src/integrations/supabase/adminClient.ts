@@ -179,6 +179,8 @@ export const forceInsertProduct = async (productData) => {
       image: productData.image || '/placeholder.svg',
       difficulty: productData.difficulty || 'Medium',
       description: productData.description || '',
+      // Make sure features is a proper array
+      features: Array.isArray(productData.features) ? productData.features : [],
       ...productData
     };
     

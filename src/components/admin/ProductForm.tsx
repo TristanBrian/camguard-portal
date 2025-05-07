@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -123,6 +124,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
         return;
       }
       
+      // Parse features from text area to proper array format
+      let featuresArray: string[] = [];
+      if (features && features.trim() !== '') {
+        featuresArray = features.split('\n').filter(item => item.trim() !== '');
+      }
+      
       // Prepare data for submission
       const productData: any = {
         name,
@@ -133,7 +140,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
         stock: stock || 0,
         brand,
         model,
-        features,
+        features: featuresArray, // Send as array instead of string
         difficulty,
       };
       

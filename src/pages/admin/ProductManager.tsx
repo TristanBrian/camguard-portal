@@ -137,7 +137,7 @@ const ProductManager = () => {
       image: product.image || '',
       brand: product.brand || '',
       model: product.model || '',
-      features: product.features?.join('\n') || '',
+      features: Array.isArray(product.features) ? product.features.join('\n') : '',
       difficulty: product.difficulty
     };
   };
