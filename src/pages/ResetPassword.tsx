@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { Lock, AlertCircle, Loader2, Check, Eye, EyeOff } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 
 const ResetPassword: React.FC = () => {
@@ -14,6 +14,9 @@ const ResetPassword: React.FC = () => {
   const [validSession, setValidSession] = useState(false);
   const [verifyingStatus, setVerifyingStatus] = useState('checking'); // 'checking', 'success', 'error'
   const [tokenError, setTokenError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0); // 0-3 scale
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -83,6 +86,45 @@ const ResetPassword: React.FC = () => {
       checkExistingSession();
     }
   }, [navigate]);
+
+  // Check password strength when it changes
+  useEffect(() => {
+    if (!password) {
+      setPasswordStrength(0);
+      return;
+    }
+    
+    let strength = 0;
+    
+    // Length check
+    if (password.length >= 8) strength++;
+    
+    // Complexity checks
+    if (/[A-Z]/.test(password)) strength++; // Has uppercase
+    if (/[0-9]/.test(password) || /[^A-Za-z0-9]/.test(password)) strength++; // Has number or special char
+    
+    setPasswordStrength(strength);
+  }, [password]);
+
+  const getPasswordStrengthColor = () => {
+    switch (passwordStrength) {
+      case 0: return 'bg-gray-200';
+      case 1: return 'bg-red-500';
+      case 2: return 'bg-yellow-500';
+      case 3: return 'bg-green-500';
+      default: return 'bg-gray-200';
+    }
+  };
+
+  const getPasswordStrengthText = () => {
+    switch (passwordStrength) {
+      case 0: return 'Enter a password';
+      case 1: return 'Weak';
+      case 2: return 'Moderate';
+      case 3: return 'Strong';
+      default: return '';
+    }
+  };
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,13 +197,38 @@ const ResetPassword: React.FC = () => {
                 </div>
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 w-full"
+                  className="pl-10 pr-10 w-full"
                   placeholder="Enter new password"
                   required
                 />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-gray-400 hover:text-gray-500"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+              
+              {/* Password strength indicator */}
+              <div className="mt-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-gray-500">Password strength:</span>
+                  <span className="text-xs font-medium">
+                    {getPasswordStrengthText()}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className={`${getPasswordStrengthColor()} h-2 rounded-full transition-all duration-300`}
+                    style={{ width: `${(passwordStrength / 3) * 100}%` }}
+                  ></div>
+                </div>
               </div>
             </div>
             
@@ -173,20 +240,46 @@ const ResetPassword: React.FC = () => {
                 </div>
                 <Input
                   id="confirmPassword"
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pl-10 w-full"
+                  className="pl-10 pr-10 w-full"
                   placeholder="Confirm new password"
                   required
                 />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="text-gray-400 hover:text-gray-500"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
+              
+              {/* Password match indicator */}
+              {confirmPassword && (
+                <div className="flex items-center mt-2">
+                  {password === confirmPassword ? (
+                    <>
+                      <Check className="h-4 w-4 text-green-500 mr-1" />
+                      <span className="text-xs text-green-500">Passwords match</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-4 w-4 text-red-500 mr-1" />
+                      <span className="text-xs text-red-500">Passwords don't match</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             
             <Button 
               type="submit" 
               className="w-full bg-kimcom-600 hover:bg-kimcom-700"
-              disabled={loading}
+              disabled={loading || password !== confirmPassword || password.length < 6}
             >
               {loading ? (
                 <>

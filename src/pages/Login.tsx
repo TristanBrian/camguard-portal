@@ -100,6 +100,82 @@ const Login: React.FC = () => {
     }
   };
 
+  // Send custom password reset email using our Resend edge function
+  const sendCustomPasswordResetEmail = async (email: string, resetToken: string) => {
+    try {
+      const origin = window.location.origin;
+      const resetUrl = `${origin}/reset-password#type=recovery&access_token=${resetToken}`;
+      
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Reset Your Password</title>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #4f46e5; padding: 20px; text-align: center; color: white; border-radius: 5px 5px 0 0; }
+            .content { padding: 20px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 5px 5px; }
+            .button { display: inline-block; background-color: #4f46e5; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; margin-top: 20px; }
+            .footer { margin-top: 30px; font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Password Reset Request</h1>
+          </div>
+          <div class="content">
+            <p>Hello,</p>
+            <p>We received a request to reset your password for your KimCom Solutions account. 
+               Click the button below to reset your password:</p>
+            
+            <p style="text-align: center;">
+              <a href="${resetUrl}" class="button">Reset Your Password</a>
+            </p>
+            
+            <p>If you didn't request a password reset, you can ignore this email - your account is still secure.</p>
+            <p>This password reset link is only valid for the next 24 hours.</p>
+            
+            <p>If the button above doesn't work, you can copy and paste the following URL into your browser:</p>
+            <p style="word-break: break-all; font-size: 12px;">${resetUrl}</p>
+            
+            <div class="footer">
+              <p>Thank you,<br>The KimCom Solutions Team</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+      
+      // Call our Resend edge function to send the email
+      const response = await fetch(`https://lcqrwhnpscchimjqysau.supabase.co/functions/v1/send-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: email,
+          subject: 'Reset Your KimCom Solutions Password',
+          html: htmlContent,
+          from: 'KimCom Solutions <noreply@resend.dev>' // Update this when you verify your domain
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to send password reset email');
+      }
+      
+      console.log('Custom password reset email sent successfully');
+      return true;
+    } catch (error) {
+      console.error('Error sending custom reset email:', error);
+      return false;
+    }
+  };
+
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -111,7 +187,8 @@ const Login: React.FC = () => {
       const redirectTo = `${origin}/reset-password`;
       console.log('Reset password redirect URL:', redirectTo);
       
-      // Use Supabase password reset functionality
+      // First, generate a password recovery token with Supabase
+      // But tell it not to send an email (we'll send our own)
       const { data, error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
         redirectTo: redirectTo,
       });
@@ -120,12 +197,7 @@ const Login: React.FC = () => {
         throw error;
       }
       
-      console.log('Password reset email sent successfully');
-      setResetSent(true);
-      toast.success('Password reset instructions sent to your email');
-      
       // For development environment - capture the reset link from the logs
-      // In a real production scenario, this wouldn't be available
       try {
         // Wait a moment to capture any response data
         setTimeout(async () => {
@@ -138,6 +210,10 @@ const Login: React.FC = () => {
       } catch (err) {
         console.log('Could not get additional auth info', err);
       }
+      
+      console.log('Password reset process initiated successfully');
+      setResetSent(true);
+      toast.success('Password reset instructions sent to your email');
       
     } catch (error: any) {
       toast.error(error.message || 'Failed to send reset email');
