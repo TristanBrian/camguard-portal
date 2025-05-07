@@ -20,15 +20,12 @@ export const isAdmin = async () => {
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
     console.log("Fetching products via admin.ts");
-    const products = await debugFetchProducts();
+    const productsData = await debugFetchProducts();
     
     // Ensure products conform to the Product type
-    const typedProducts: Product[] = products.map(product => {
-      // Generate a unique ID if one doesn't exist
-      const id = product.id || crypto.randomUUID();
-      
+    const typedProducts: Product[] = productsData.map((product: any) => {
       return {
-        id,
+        id: product.id || crypto.randomUUID(),
         name: product.name,
         price: Number(product.price),
         stock: Number(product.stock),
