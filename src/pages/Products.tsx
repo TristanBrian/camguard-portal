@@ -1,8 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import ProductDetailPopup from '@/components/ProductDetailPopup';
 import ProductsTable from '@/components/ProductsTable'; 
@@ -399,8 +396,6 @@ const Products = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navbar />
-
       <main className="flex-grow">
         <section className="bg-gradient-to-r from-kimcom-800 to-kimcom-600 py-16 text-white">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -790,8 +785,6 @@ const Products = () => {
         </section>
       </main>
 
-      <Footer />
-      
       <ProductDetailPopup
         product={selectedProduct}
         isOpen={isProductDetailOpen}
