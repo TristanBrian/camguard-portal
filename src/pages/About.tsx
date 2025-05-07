@@ -1,5 +1,6 @@
 import React from 'react';
 import { Award, CheckCircle, Shield, Users, Target, Star, Clock } from 'lucide-react';
+import CTASection from '@/components/CTASection';
 
 const About = () => {
   // Our values
