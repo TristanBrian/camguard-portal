@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { checkIfAdmin } from '@/utils/adminAuth';
@@ -194,7 +193,7 @@ export const forceInsertProduct = async (productData) => {
     // Use a service key and bypass RLS policy for admin operations
     const { data, error } = await adminClient
       .from('products')
-      .insert([safeProductData])
+      .insert(safeProductData)
       .select();
       
     if (error) {
@@ -205,14 +204,10 @@ export const forceInsertProduct = async (productData) => {
       return new Promise((resolve, reject) => {
         setTimeout(async () => {
           try {
+            // Fixed: Use the correct format for insert and don't include headers in options
             const { data: fallbackData, error: fallbackError } = await adminClient
               .from('products')
-              .insert([safeProductData], { 
-                headers: { 
-                  'Prefer': 'return=representation',
-                  'x-bypassing-rls': 'true' // Custom header for debugging
-                }
-              })
+              .insert(safeProductData)
               .select();
               
             if (fallbackError) {
