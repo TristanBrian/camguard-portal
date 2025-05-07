@@ -1,16 +1,41 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, ShieldCheck, ShoppingCart, Phone, Lock, User, UserCircle2, LogOut } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { 
+  Menu, X, ShieldCheck, ShoppingCart, Phone, 
+  Lock, UserCircle2, LogOut, Search 
+} from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu"
+import { cn } from "@/lib/utils";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [cartItemCount, setCartItemCount] = useState(0);
+  const [isScrolled, setIsScrolled] = useState(false);
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Handle scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const updateCartCount = () => {
     // Check if user is logged in
@@ -81,11 +106,7 @@ const Navbar = () => {
   };
 
   const handleCartClick = () => {
-    navigate('/products');
-    // Trigger cart popover to open via localStorage
-    localStorage.setItem('open_cart_popover', 'true');
-    // Force update of cart count
-    updateCartCount();
+    navigate('/cart');
   };
 
   // Helper function to safely get the first name
@@ -96,8 +117,18 @@ const Navbar = () => {
     return 'User';
   };
 
+  // Active link detection
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  }
+
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
+    <header className={cn(
+      "sticky top-0 z-50 backdrop-blur-sm border-b transition-all duration-300",
+      isScrolled 
+        ? "bg-white/95 shadow-sm" 
+        : "bg-white/90"
+    )}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo and Brand */}
@@ -109,30 +140,69 @@ const Navbar = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-10">
-            <Link to="/" className="text-gray-700 hover:text-kimcom-600 font-medium transition-colors">
-              Home
-            </Link>
-            <Link to="/services" className="text-gray-700 hover:text-kimcom-600 font-medium transition-colors">
-              Services
-            </Link>
-            <Link to="/products" className="text-gray-700 hover:text-kimcom-600 font-medium transition-colors">
-              Products
-            </Link>
-            <Link to="/about" className="text-gray-700 hover:text-kimcom-600 font-medium transition-colors">
-              About
-            </Link>
-            <Link to="/contact" className="text-gray-700 hover:text-kimcom-600 font-medium transition-colors">
-              Contact
-            </Link>
-          </nav>
+          <div className="hidden md:block">
+            <NavigationMenu>
+              <NavigationMenuList>
+                <NavigationMenuItem>
+                  <Link to="/">
+                    <NavigationMenuLink className={cn(
+                      navigationMenuTriggerStyle(),
+                      isActive('/') && "bg-accent/50 text-accent-foreground"
+                    )}>
+                      Home
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <Link to="/services">
+                    <NavigationMenuLink className={cn(
+                      navigationMenuTriggerStyle(),
+                      isActive('/services') && "bg-accent/50 text-accent-foreground"
+                    )}>
+                      Services
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <Link to="/products">
+                    <NavigationMenuLink className={cn(
+                      navigationMenuTriggerStyle(),
+                      isActive('/products') && "bg-accent/50 text-accent-foreground"
+                    )}>
+                      Products
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <Link to="/about">
+                    <NavigationMenuLink className={cn(
+                      navigationMenuTriggerStyle(),
+                      isActive('/about') && "bg-accent/50 text-accent-foreground"
+                    )}>
+                      About
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <Link to="/contact">
+                    <NavigationMenuLink className={cn(
+                      navigationMenuTriggerStyle(),
+                      isActive('/contact') && "bg-accent/50 text-accent-foreground"
+                    )}>
+                      Contact
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
+          </div>
 
           {/* Action Buttons */}
           <div className="hidden md:flex items-center space-x-3">
             <Button 
               variant="outline" 
               size="sm" 
-              className="flex items-center gap-1 whitespace-nowrap text-xs lg:text-sm" 
+              className="flex items-center gap-1 whitespace-nowrap text-xs lg:text-sm transition-all hover:bg-kimcom-50" 
               onClick={handleCallButton}
             >
               <Phone className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />
@@ -143,11 +213,11 @@ const Navbar = () => {
               onClick={handleCartClick}
               size="sm"
               variant="outline"
-              className="relative"
+              className="relative transition-all hover:bg-kimcom-50"
             >
               <ShoppingCart className="h-4 w-4" />
               {cartItemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
                   {cartItemCount}
                 </span>
               )}
@@ -214,7 +284,7 @@ const Navbar = () => {
             >
               <ShoppingCart className="h-5 w-5" />
               {cartItemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
                   {cartItemCount}
                 </span>
               )}
@@ -231,41 +301,56 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - Improved with animations */}
       {isMenuOpen && (
-        <div className="md:hidden bg-white border-b border-gray-200">
+        <div className="md:hidden bg-white border-b border-gray-200 animate-fade-in">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             <Link
               to="/"
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
+              className={cn(
+                "block px-3 py-2 rounded-md text-base font-medium hover:text-kimcom-600 hover:bg-gray-50 transition-colors",
+                isActive('/') ? "text-kimcom-600 bg-gray-50" : "text-gray-700"
+              )}
               onClick={() => setIsMenuOpen(false)}
             >
               Home
             </Link>
             <Link
               to="/services"
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
+              className={cn(
+                "block px-3 py-2 rounded-md text-base font-medium hover:text-kimcom-600 hover:bg-gray-50 transition-colors",
+                isActive('/services') ? "text-kimcom-600 bg-gray-50" : "text-gray-700"
+              )}
               onClick={() => setIsMenuOpen(false)}
             >
               Services
             </Link>
             <Link
               to="/products"
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
+              className={cn(
+                "block px-3 py-2 rounded-md text-base font-medium hover:text-kimcom-600 hover:bg-gray-50 transition-colors",
+                isActive('/products') ? "text-kimcom-600 bg-gray-50" : "text-gray-700"
+              )}
               onClick={() => setIsMenuOpen(false)}
             >
               Products
             </Link>
             <Link
               to="/about"
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
+              className={cn(
+                "block px-3 py-2 rounded-md text-base font-medium hover:text-kimcom-600 hover:bg-gray-50 transition-colors",
+                isActive('/about') ? "text-kimcom-600 bg-gray-50" : "text-gray-700"
+              )}
               onClick={() => setIsMenuOpen(false)}
             >
               About
             </Link>
             <Link
               to="/contact"
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
+              className={cn(
+                "block px-3 py-2 rounded-md text-base font-medium hover:text-kimcom-600 hover:bg-gray-50 transition-colors",
+                isActive('/contact') ? "text-kimcom-600 bg-gray-50" : "text-gray-700"
+              )}
               onClick={() => setIsMenuOpen(false)}
             >
               Contact
@@ -278,14 +363,17 @@ const Navbar = () => {
                 </div>
                 <Link 
                   to="/profile" 
-                  className="flex w-full items-center px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
+                  className={cn(
+                    "flex w-full items-center px-3 py-2 rounded-md text-base font-medium hover:text-kimcom-600 hover:bg-gray-50 transition-colors",
+                    isActive('/profile') ? "text-kimcom-600 bg-gray-50" : "text-gray-700"
+                  )}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <UserCircle2 className="h-5 w-5 mr-2" />
                   My Profile
                 </Link>
                 <button
-                  className="flex w-full px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
+                  className="flex w-full px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50 transition-colors"
                   onClick={() => {
                     handleLogout();
                     setIsMenuOpen(false);
@@ -298,7 +386,10 @@ const Navbar = () => {
             ) : (
               <Link
                 to="/login"
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
+                className={cn(
+                  "block px-3 py-2 rounded-md text-base font-medium hover:text-kimcom-600 hover:bg-gray-50 transition-colors",
+                  isActive('/login') ? "text-kimcom-600 bg-gray-50" : "text-gray-700"
+                )}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Login
@@ -308,10 +399,16 @@ const Navbar = () => {
             {currentUser?.role === 'admin' && (
               <Link
                 to="/admin-login"
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-kimcom-600 hover:bg-gray-50"
+                className={cn(
+                  "block px-3 py-2 rounded-md text-base font-medium hover:text-kimcom-600 hover:bg-gray-50 transition-colors",
+                  isActive('/admin-login') ? "text-kimcom-600 bg-gray-50" : "text-gray-700"
+                )}
                 onClick={() => setIsMenuOpen(false)}
               >
-                Admin
+                <div className="flex items-center">
+                  <Lock className="h-5 w-5 mr-2" />
+                  Admin
+                </div>
               </Link>
             )}
             
@@ -326,15 +423,11 @@ const Navbar = () => {
                 <span>0740213382</span>
               </Button>
               
-              <div className="flex space-x-2">
+              <Link to="/cart" onClick={() => setIsMenuOpen(false)}>
                 <Button 
                   variant="outline"
                   size="sm"
-                  className="relative flex-1 justify-center"
-                  onClick={() => {
-                    navigate('/products');
-                    setIsMenuOpen(false);
-                  }}
+                  className="relative flex-1 justify-center w-full"
                 >
                   <ShoppingCart className="h-4 w-4 mr-2" />
                   Cart
@@ -344,7 +437,7 @@ const Navbar = () => {
                     </span>
                   )}
                 </Button>
-              </div>
+              </Link>
               
               <Link to="/products" onClick={() => setIsMenuOpen(false)}>
                 <Button className="bg-kimcom-600 hover:bg-kimcom-700 flex items-center justify-center gap-1 w-full">

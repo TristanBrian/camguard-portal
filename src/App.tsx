@@ -1,7 +1,8 @@
 
-import { useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import './App.css';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import Index from './pages/Index';
 import Products from './pages/Products';
 import Services from './pages/Services';
@@ -19,23 +20,29 @@ import MarketTrends from './pages/admin/MarketTrends';
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/products" element={<Products />} />
-      <Route path="/services" element={<Services />} />
-      <Route path="/about" element={<About />} />
-      <Route path="/contact" element={<Contact />} />
-      <Route path="/product-details/:id" element={<ProductDetails />} />
-      <Route path="/cart" element={<Cart />} />
-      <Route path="/checkout" element={<Checkout />} />
-      <Route path="/admin-login" element={<AdminLogin />} />
-      <Route path="/admin" element={<Admin />} />
-      <Route path="/admin/products" element={<ProductManager />} />
-      <Route path="/admin/products/edit/:id" element={<ProductManager />} />
-      <Route path="/admin/statistics" element={<Statistics />} />
-      <Route path="/admin/market-trends" element={<MarketTrends />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <div className="flex flex-col min-h-screen">
+      <Navbar />
+      <div className="flex-grow">
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/services" element={<Services />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/product-details/:id" element={<ProductDetails />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/products" element={<ProductManager />} />
+          <Route path="/admin/products/edit/:id" element={<ProductManager />} />
+          <Route path="/admin/statistics" element={<Statistics />} />
+          <Route path="/admin/market-trends" element={<MarketTrends />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </div>
+      <Footer />
+    </div>
   );
 }
 
