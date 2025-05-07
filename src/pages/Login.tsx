@@ -1,11 +1,10 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { User, Lock, Mail, UserCircle2, ArrowLeft, Loader2 } from 'lucide-react';
+import { User, Lock, Mail, UserCircle2, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 
 const Login: React.FC = () => {
@@ -24,8 +23,18 @@ const Login: React.FC = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   
+  // Developer mode state - for testing password reset
+  const [resetLink, setResetLink] = useState<string | null>(null);
+  
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Clear the reset link when leaving the page
+  useEffect(() => {
+    return () => {
+      setResetLink(null);
+    };
+  }, []);
 
   // Login with Supabase
   const handleLogin = async (e: React.FormEvent) => {
@@ -94,6 +103,7 @@ const Login: React.FC = () => {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setResetLink(null);
     
     try {
       // Get the current site URL for the redirect
@@ -102,7 +112,7 @@ const Login: React.FC = () => {
       console.log('Reset password redirect URL:', redirectTo);
       
       // Use Supabase password reset functionality
-      const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
         redirectTo: redirectTo,
       });
       
@@ -113,6 +123,22 @@ const Login: React.FC = () => {
       console.log('Password reset email sent successfully');
       setResetSent(true);
       toast.success('Password reset instructions sent to your email');
+      
+      // For development environment - capture the reset link from the logs
+      // In a real production scenario, this wouldn't be available
+      try {
+        // Wait a moment to capture any response data
+        setTimeout(async () => {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            // Display a message about checking Supabase dashboard
+            setResetLink('Please check the Supabase dashboard Auth > Users section to find your password reset link.');
+          }
+        }, 1000);
+      } catch (err) {
+        console.log('Could not get additional auth info', err);
+      }
+      
     } catch (error: any) {
       toast.error(error.message || 'Failed to send reset email');
       console.error('Reset password error:', error);
@@ -125,6 +151,7 @@ const Login: React.FC = () => {
   const handleBackToLogin = () => {
     setShowForgotPassword(false);
     setResetSent(false);
+    setResetLink(null);
   };
 
   // If showing the forgot password screen
@@ -159,6 +186,26 @@ const Login: React.FC = () => {
                     Check your email and follow the link to reset your password.
                     If you don't see the email, check your spam folder.
                   </p>
+                  
+                  {resetLink && (
+                    <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-md">
+                      <div className="flex items-center gap-2 text-amber-700 mb-2">
+                        <AlertCircle className="h-5 w-5" />
+                        <h3 className="font-semibold">Development Mode</h3>
+                      </div>
+                      <p className="text-sm text-amber-700">{resetLink}</p>
+                      <div className="mt-3">
+                        <a 
+                          href="https://supabase.com/dashboard/project/lcqrwhnpscchimjqysau/auth/users" 
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-amber-800 underline"
+                        >
+                          Go to Supabase Users Dashboard
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <form onSubmit={handleForgotPassword}>
