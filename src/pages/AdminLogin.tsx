@@ -20,7 +20,7 @@ const AdminLogin: React.FC = () => {
     const checkAdmin = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        const hasRole = await isAdmin(session.user.id);
+        const hasRole = await isAdmin();
         if (hasRole) {
           navigate('/admin');
         }
@@ -72,7 +72,7 @@ const AdminLogin: React.FC = () => {
       }
 
       // Check if user is admin in user_roles table
-      const hasRole = await isAdmin(data.session.user.id);
+      const hasRole = await isAdmin();
 
       if (hasRole) {
         toast.success('Login successful');

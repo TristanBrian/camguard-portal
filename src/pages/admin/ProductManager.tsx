@@ -125,6 +125,23 @@ const ProductManager = () => {
     }
   };
   
+  const prepareProductFormData = (product: Product) => {
+    // Convert product data to the format expected by ProductForm
+    return {
+      name: product.name,
+      price: String(product.price),
+      category: product.category,
+      description: product.description || '',
+      sku: product.sku,
+      stock: String(product.stock),
+      image: product.image || '',
+      brand: product.brand || '',
+      model: product.model || '',
+      features: product.features?.join('\n') || '',
+      difficulty: product.difficulty
+    };
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -160,7 +177,7 @@ const ProductManager = () => {
               <ProductForm 
                 onSubmit={handleUpdateProduct}
                 isEditing={true}
-                initialData={currentProduct}
+                initialData={prepareProductFormData(currentProduct)}
               />
             ) : (
               <div className="text-center py-8">

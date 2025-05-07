@@ -21,18 +21,8 @@ const Index = () => {
         setLoading(true);
         const products = await fetchProducts();
         
-        // Ensure product data matches the Product type
-        const typedProducts: Product[] = products.slice(0, 3).map(product => ({
-          id: product.id,
-          name: product.name,
-          price: Number(product.price),
-          stock: Number(product.stock),
-          category: product.category,
-          sku: product.sku,
-          description: product.description || '',
-          image: product.image || '/placeholder.svg',
-          difficulty: product.difficulty || 'Medium'
-        }));
+        // Take just the first 3 products for the featured section
+        const typedProducts = products.slice(0, 3);
         
         setFeaturedProducts(typedProducts);
       } catch (error) {
@@ -70,7 +60,19 @@ const Index = () => {
           ) : featuredProducts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {featuredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard
+                  key={product.id}
+                  id={product.id}
+                  name={product.name}
+                  description={product.description}
+                  price={product.price}
+                  image={product.image}
+                  category={product.category}
+                  difficulty={product.difficulty}
+                  stock={product.stock}
+                  brand={product.brand}
+                  model={product.model}
+                />
               ))}
             </div>
           ) : (
@@ -84,7 +86,14 @@ const Index = () => {
         </div>
       </section>
       
-      <CTASection />
+      <CTASection 
+        title="Need Help with Installation?" 
+        description="Our team of experts is ready to help you set up your security system."
+        primaryButtonText="Contact Us"
+        secondaryButtonText="Call Now"
+        onPrimaryClick={() => navigate('/contact')}
+        onSecondaryClick={() => window.location.href = 'tel:+1234567890'}
+      />
     </div>
   );
 };

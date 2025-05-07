@@ -21,7 +21,21 @@ export const fetchProducts = async (): Promise<Product[]> => {
   try {
     console.log("Fetching products via admin.ts");
     const products = await debugFetchProducts();
-    return products;
+    
+    // Ensure products conform to the Product type
+    const typedProducts: Product[] = products.map(product => ({
+      id: product.id || crypto.randomUUID(),
+      name: product.name,
+      price: Number(product.price),
+      stock: Number(product.stock),
+      category: product.category,
+      sku: product.sku || '',
+      description: product.description || '',
+      image: product.image || '/placeholder.svg',
+      difficulty: product.difficulty || 'Medium' as 'Easy' | 'Medium' | 'Advanced'
+    }));
+    
+    return typedProducts;
   } catch (error) {
     console.error("Error in fetchProducts:", error);
     throw error;
