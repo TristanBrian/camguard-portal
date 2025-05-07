@@ -1,15 +1,35 @@
-
 import { supabase } from './client';
 import { adminClient, debugFetchProducts, forceInsertProduct } from './adminClient';
 import { toast } from 'sonner';
 import { Product } from '@/data/productsData';
+import { checkIfAdmin } from '@/utils/adminAuth';
 
 // Function to check if user is admin
 export const isAdmin = async () => {
   try {
-    // This is a simple check - could be expanded with actual role checking
+    // First check for hardcoded admin in localStorage
+    if (checkIfAdmin()) {
+      return true;
+    }
+    
+    // Otherwise check Supabase auth
     const { data: { user } } = await supabase.auth.getUser();
-    return user !== null;
+    if (!user) return false;
+    
+    // Check user_roles table for admin role
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
+      
+    if (error) {
+      console.error("Error checking admin role:", error);
+      return false;
+    }
+    
+    return !!data;
   } catch (error) {
     console.error("Error checking admin status:", error);
     return false;

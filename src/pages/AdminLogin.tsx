@@ -7,7 +7,7 @@ import { Lock, User } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { supabase } from "@/integrations/supabase/client";
 import { isAdmin } from "@/integrations/supabase/admin";
-import { adminClient } from "@/integrations/supabase/adminClient";
+import { checkIfAdmin } from "@/utils/adminAuth";
 
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -15,31 +15,25 @@ const AdminLogin: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Check if user is already authenticated on mount
   useEffect(() => {
-    // On mount, check if a Supabase user is logged in and is admin
-    const checkAdmin = async () => {
+    const checkAuth = async () => {
+      // First check localStorage
+      if (checkIfAdmin()) {
+        navigate('/admin');
+        return;
+      }
+      
+      // Then check Supabase auth
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const hasRole = await isAdmin();
         if (hasRole) {
           navigate('/admin');
         }
-      } else {
-        // Also check for hardcoded admin in localStorage
-        const currentUser = localStorage.getItem('kimcom_current_user');
-        if (currentUser) {
-          try {
-            const parsedUser = JSON.parse(currentUser);
-            if (parsedUser.email === 'admin@kimcom.com' && parsedUser.role === 'admin') {
-              navigate('/admin');
-            }
-          } catch (e) {
-            // Handle parsing error silently
-          }
-        }
       }
     };
-    checkAdmin();
+    checkAuth();
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {

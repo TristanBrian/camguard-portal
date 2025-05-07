@@ -28,8 +28,7 @@ export const checkIfAdmin = (): boolean => {
       }
     }
     
-    // Only log this, don't return false as we might need to check Supabase auth too
-    console.log("Admin check: No local admin authentication found");
+    // Check Supabase auth for admin role if local check fails
     return false;
   } catch (error) {
     console.error("Error checking admin status:", error);

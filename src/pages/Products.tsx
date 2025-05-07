@@ -42,7 +42,7 @@ import {
   createTestProducts,
   verifyProductsTable
 } from '@/integrations/supabase/adminClient';
-import { initializeAdminIfNeeded } from '@/utils/adminAuth';
+import { initializeAdminIfNeeded, checkIfAdmin } from '@/utils/adminAuth';
 
 const Products = () => {
   const navigate = useNavigate();
@@ -60,11 +60,18 @@ const Products = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [isCreatingTestProducts, setIsCreatingTestProducts] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   // Ensure we have an admin user for development
   initializeAdminIfNeeded();
   
-  // Enhanced fetch products function with better error handling
+  // Check if current user is admin
+  useEffect(() => {
+    const isUserAdmin = checkIfAdmin();
+    setIsAdmin(isUserAdmin);
+  }, []);
+  
+  // Enhanced fetch products function with real-time updates
   useEffect(() => {
     const loadProducts = async () => {
       try {
@@ -72,53 +79,17 @@ const Products = () => {
         setError(null);
         console.log("Fetching products for display page...");
         
-        // Verify products table exists
-        await verifyProductsTable();
+        // Fetch products from database
+        const productsData = await debugFetchProducts();
         
-        let productsData: Product[] = [];
-        let fetchError = null;
-        
-        // Try multiple fetching strategies
-        try {
-          console.log("Fetching products with debugFetchProducts...");
-          productsData = await debugFetchProducts() as Product[];
-          
-          if (productsData && productsData.length > 0) {
-            console.log(`Successfully loaded ${productsData.length} products`);
-          } else {
-            console.log("No products found via debugFetchProducts, trying direct method");
-            
-            // Try direct fetch as a last resort
-            const { data: directProducts, error: directError } = await adminClient
-              .from('products')
-              .select('*');
-              
-            if (directError) {
-              console.error("Direct fetch error:", directError);
-              fetchError = directError;
-            } else if (directProducts && directProducts.length > 0) {
-              console.log(`Successfully loaded ${directProducts.length} products with direct fetch`);
-              productsData = directProducts as Product[];
-            }
-          }
-        } catch (err) {
-          console.error("Error fetching products:", err);
-          fetchError = err;
-        }
-        
-        // At this point, if we have products, show them
-        if (productsData.length > 0) {
-          console.log("Products loaded:", productsData);
+        if (productsData && productsData.length > 0) {
+          console.log(`Successfully loaded ${productsData.length} products`);
           setProducts(productsData);
           toast.success(`Loaded ${productsData.length} products`);
         } else {
           console.log("No products found in the database");
-          if (fetchError) {
-            setError(`Failed to load products: ${fetchError.message || 'Unknown error'}`);
-            toast.error("Error loading products");
-          } else {
-            toast.warning("No products found. You may need to add some products in the admin dashboard.");
-          }
+          setError("No products found. You may need to add some products in the admin dashboard.");
+          toast.warning("No products found. You may need to add some products in the admin dashboard.");
         }
         
         setLoading(false);
@@ -156,62 +127,76 @@ const Products = () => {
   
   // Check user login status and load cart items
   useEffect(() => {
-    const user = localStorage.getItem('kimcom_current_user');
-    if (user) {
-      try {
-        const userData = JSON.parse(user);
-        setCurrentUser(userData);
-        setIsLoggedIn(true);
-        
-        const userCartKey = `kimcom_cart_${userData.id}`;
-        const savedCart = localStorage.getItem(userCartKey);
-        if (savedCart) {
-          setCartItems(JSON.parse(savedCart));
-        } else {
-          setCartItems([]);
+    const checkAuth = async () => {
+      // First check localStorage for user
+      const user = localStorage.getItem('kimcom_current_user');
+      if (user) {
+        try {
+          const userData = JSON.parse(user);
+          setCurrentUser(userData);
+          setIsLoggedIn(true);
+          setIsAdmin(userData.role === 'admin');
+          
+          // Load cart items for the user
+          const userCartKey = `kimcom_cart_${userData.id}`;
+          const savedCart = localStorage.getItem(userCartKey);
+          if (savedCart) {
+            setCartItems(JSON.parse(savedCart));
+          }
+        } catch (e) {
+          console.error("Error parsing user data:", e);
         }
-      } catch (e) {
-        console.error("Error parsing user data:", e);
-      }
-    } else {
-      const checkUser = async () => {
+      } else {
+        // Then check Supabase auth
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           setCurrentUser(user);
           setIsLoggedIn(true);
           
+          // Check if user is admin
+          try {
+            const { data } = await supabase
+              .from("user_roles")
+              .select("role")
+              .eq("user_id", user.id)
+              .eq("role", "admin")
+              .maybeSingle();
+              
+            setIsAdmin(!!data);
+          } catch (error) {
+            console.error("Error checking admin status:", error);
+          }
+          
+          // Load cart items
           const userCartKey = `kimcom_cart_${user.id}`;
           const savedCart = localStorage.getItem(userCartKey);
           if (savedCart) {
             setCartItems(JSON.parse(savedCart));
-          } else {
-            setCartItems([]);
           }
         } else {
+          // If no user found, load anonymous cart
           const anonymousCart = localStorage.getItem('cartItems');
           if (anonymousCart) {
             setCartItems(JSON.parse(anonymousCart));
           }
         }
-      };
-      
-      checkUser();
-    }
+      }
+    };
+    
+    checkAuth();
   }, []);
   
   // Save cart items to localStorage whenever they change
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem(`kimcom_cart_${currentUser.id}`, JSON.stringify(cartItems));
-      
-      const event = new Event('storage');
-      window.dispatchEvent(event);
     } else {
       localStorage.setItem('cartItems', JSON.stringify(cartItems));
-      
-      const event = new Event('storage');
-      window.dispatchEvent(event);
     }
+    
+    // Trigger storage event for other tabs
+    const event = new Event('storage');
+    window.dispatchEvent(event);
   }, [cartItems, currentUser]);
 
   // Extract unique categories from products for the filter
@@ -225,6 +210,7 @@ const Products = () => {
     return matchesSearch && matchesCategory;
   });
 
+  // Handle product view details
   const handleViewDetails = (id: string) => {
     const product = products.find(p => p.id === id);
     if (product) {
@@ -235,6 +221,7 @@ const Products = () => {
     }
   };
 
+  // Handle adding product to cart
   const handleAddToCart = (id: string) => {
     const existingItem = cartItems.find(item => item.id === id);
     
@@ -252,6 +239,7 @@ const Products = () => {
     setIsCartOpen(true);
   };
 
+  // Handle removing item from cart
   const handleRemoveFromCart = (id: string) => {
     const existingItem = cartItems.find(item => item.id === id);
     const product = products.find(p => p.id === id);
@@ -267,12 +255,14 @@ const Products = () => {
     }
   };
 
+  // Handle deleting item from cart
   const handleDeleteFromCart = (id: string) => {
     const product = products.find(p => p.id === id);
     setCartItems(cartItems.filter(item => item.id !== id));
     toast.info(`Removed ${product?.name} from cart`);
   };
 
+  // Handle emptying cart
   const handleEmptyCart = () => {
     if (cartItems.length === 0) {
       toast.error("Your cart is already empty");
@@ -283,6 +273,7 @@ const Products = () => {
     toast.success("Cart emptied successfully");
   };
 
+  // Handle checkout process
   const handleCheckout = () => {
     if (cartItems.length === 0) {
       toast.error("Your cart is empty");
@@ -307,6 +298,18 @@ const Products = () => {
     navigate('/checkout');
   };
 
+  // Handle refreshing products
+  const handleRefreshProducts = () => {
+    setRetryCount(prev => prev + 1); // Increment retry count to trigger useEffect
+    toast.success("Refreshing products...");
+  };
+
+  // Handle navigating to admin dashboard
+  const handleGoToAdmin = () => {
+    navigate('/admin/products');
+  };
+
+  // Calculate cart totals and product details
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   const cartProductDetails = cartItems.map(item => {
@@ -320,30 +323,13 @@ const Products = () => {
   const cartTotal = cartProductDetails.reduce((total, item) => 
     total + (item.price * item.quantity), 0);
 
+  // Product actions
   const onProductAddToCart = (product: Product) => {
     handleAddToCart(product.id);
   };
 
   const onProductCardClick = (id: string) => {
     handleViewDetails(id);
-  };
-
-  const handleRefreshProducts = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      setRetryCount(prev => prev + 1); // Increment retry count to trigger useEffect
-      toast.success("Refreshing products...");
-    } catch (error) {
-      console.error("Error refreshing products:", error);
-      setError("Failed to refresh products. Please try again.");
-      toast.error("Failed to refresh products");
-      setLoading(false);
-    }
-  };
-
-  const handleGoToAdmin = () => {
-    navigate('/admin/products');
   };
 
   const handleCreateTestProducts = async () => {
@@ -366,33 +352,6 @@ const Products = () => {
       setIsCreatingTestProducts(false);
     }
   };
-
-  // Check if the user is an admin
-  const [isAdmin, setIsAdmin] = useState(false);
-  
-  useEffect(() => {
-    const checkIfAdmin = async () => {
-      if (!isLoggedIn || !currentUser) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", currentUser.id)
-          .eq("role", "admin")
-          .maybeSingle();
-          
-        if (data) {
-          setIsAdmin(true);
-          console.log("User is admin");
-        }
-      } catch (error) {
-        console.error("Error checking admin status:", error);
-      }
-    };
-    
-    checkIfAdmin();
-  }, [isLoggedIn, currentUser]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -476,7 +435,6 @@ const Products = () => {
                   variant="outline" 
                   size="sm" 
                   onClick={handleRefreshProducts}
-                  disabled={loading}
                 >
                   <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                   Refresh
@@ -583,13 +541,23 @@ const Products = () => {
                   </PopoverContent>
                 </Popover>
                 
-                <Button 
-                  onClick={handleCheckout}
-                  className="bg-kimcom-600 hover:bg-kimcom-700"
-                  disabled={cartItemCount === 0}
-                >
-                  {isLoggedIn ? 'Proceed to Checkout' : 'Login to Checkout'}
-                </Button>
+                {!isLoggedIn ? (
+                  <Button 
+                    onClick={() => navigate('/login')}
+                    className="bg-kimcom-600 hover:bg-kimcom-700"
+                  >
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Login to Continue
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={handleCheckout}
+                    className="bg-kimcom-600 hover:bg-kimcom-700"
+                    disabled={cartItemCount === 0}
+                  >
+                    Proceed to Checkout
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -705,7 +673,7 @@ const Products = () => {
                     ? "No products found in the database. Please add some products in the admin dashboard or create test products." 
                     : "No products found matching your search."}
                 </p>
-                {products.length === 0 && (
+                {products.length === 0 && isAdmin && (
                   <div className="flex flex-col items-center gap-4 mt-4">
                     <Button 
                       className="bg-kimcom-600 hover:bg-kimcom-700"
