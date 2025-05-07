@@ -25,6 +25,7 @@ const Login: React.FC = () => {
   
   // Developer mode state - for testing password reset
   const [resetLink, setResetLink] = useState<string | null>(null);
+  const [testReset, setTestReset] = useState(false);
   
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -198,26 +199,62 @@ const Login: React.FC = () => {
       }
       
       // For development environment - capture the reset link from the logs
-      try {
-        // Wait a moment to capture any response data
-        setTimeout(async () => {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            // Display a message about checking Supabase dashboard
-            setResetLink('Please check the Supabase dashboard Auth > Users section to find your password reset link.');
-          }
-        }, 1000);
-      } catch (err) {
-        console.log('Could not get additional auth info', err);
-      }
-      
+      setTestReset(true);
       console.log('Password reset process initiated successfully');
       setResetSent(true);
       toast.success('Password reset instructions sent to your email');
       
+      // Wait a moment to try to get access to token info
+      setTimeout(async () => {
+        try {
+          const { data: authData } = await supabase.auth.getSession();
+          if (authData?.session) {
+            console.log('Active session found, may help with password reset testing');
+          }
+        } catch (err) {
+          console.log('Could not get session info', err);
+        }
+      }, 500);
+      
     } catch (error: any) {
       toast.error(error.message || 'Failed to send reset email');
       console.error('Reset password error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDevModeTest = async () => {
+    if (!forgotPasswordEmail) {
+      toast.error('Please enter an email address first');
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      // Direct link to test password reset in dev mode
+      const origin = window.location.origin;
+      const testResetUrl = `${origin}/reset-password`;
+      
+      // Try to create a test session for the user
+      const { data, error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
+        redirectTo: testResetUrl,
+      });
+      
+      if (error) throw error;
+      
+      toast.success('Check the Supabase Auth dashboard to find the password reset link', {
+        duration: 6000,
+      });
+      
+      // Set a link to the Supabase dashboard
+      setResetLink('https://supabase.com/dashboard/project/lcqrwhnpscchimjqysau/auth/users');
+      
+      console.log('Dev mode: Test reset link should be available in Supabase Auth dashboard');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to generate test reset link');
+      console.error('Dev mode test error:', err);
     } finally {
       setLoading(false);
     }
@@ -228,6 +265,7 @@ const Login: React.FC = () => {
     setShowForgotPassword(false);
     setResetSent(false);
     setResetLink(null);
+    setTestReset(false);
   };
 
   // If showing the forgot password screen
@@ -263,23 +301,52 @@ const Login: React.FC = () => {
                     If you don't see the email, check your spam folder.
                   </p>
                   
-                  {resetLink && (
+                  {testReset && (
                     <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-md">
                       <div className="flex items-center gap-2 text-amber-700 mb-2">
                         <AlertCircle className="h-5 w-5" />
                         <h3 className="font-semibold">Development Mode</h3>
                       </div>
-                      <p className="text-sm text-amber-700">{resetLink}</p>
-                      <div className="mt-3">
-                        <a 
-                          href="https://supabase.com/dashboard/project/lcqrwhnpscchimjqysau/auth/users" 
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-amber-800 underline"
-                        >
-                          Go to Supabase Users Dashboard
-                        </a>
-                      </div>
+                      <p className="text-sm text-amber-700 mb-3">
+                        To test the password reset in development:
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        className="bg-amber-100 border-amber-300 mb-3 w-full"
+                        onClick={handleDevModeTest}
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Getting test link...
+                          </>
+                        ) : 'Generate Test Reset Link'}
+                      </Button>
+                      {resetLink && (
+                        <div className="mt-3">
+                          <p className="text-sm text-amber-700 mb-2">Check users in Supabase Auth dashboard:</p>
+                          <a 
+                            href="https://supabase.com/dashboard/project/lcqrwhnpscchimjqysau/auth/users" 
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-amber-800 underline flex items-center"
+                          >
+                            Supabase Auth Dashboard
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1 h-3 w-3">
+                              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                              <polyline points="15 3 21 3 21 9"></polyline>
+                              <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                          </a>
+                          <p className="text-xs mt-2 text-amber-700">
+                            1. Find the user with email: {forgotPasswordEmail}<br/>
+                            2. Click on the three dots menu<br/>
+                            3. Select "Generate link" &gt; "Password recovery"<br/>
+                            4. Copy and use the generated link
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

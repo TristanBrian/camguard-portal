@@ -30,6 +30,21 @@ const handler = async (req: Request): Promise<Response> => {
     const fromEmail = from || "KimCom Solutions <noreply@resend.dev>";
 
     console.log(`Sending email to ${to} with subject '${subject}'`);
+    
+    // Log the content for development/debugging
+    console.log(`Email content: ${html.substring(0, 100)}...`);
+    
+    // In development, we can extract any links from the email content for testing
+    const links = html.match(/href="([^"]*)"[^>]*>/g);
+    if (links && links.length) {
+      console.log("Links found in email:");
+      links.forEach((link, index) => {
+        const url = link.match(/href="([^"]*)"/)?.[1];
+        if (url) {
+          console.log(`Link ${index + 1}: ${url}`);
+        }
+      });
+    }
 
     const emailResponse = await resend.emails.send({
       from: fromEmail,
@@ -40,8 +55,16 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email sent successfully:", emailResponse);
 
+    // For development, return links in the response to make them accessible
+    // in the frontend during testing
     return new Response(
-      JSON.stringify({ success: true, id: emailResponse.id }),
+      JSON.stringify({ 
+        success: true, 
+        id: emailResponse.id,
+        debug: {
+          links: links?.map(link => link.match(/href="([^"]*)"/)?.[1]).filter(Boolean) || []
+        }
+      }),
       {
         status: 200,
         headers: {
