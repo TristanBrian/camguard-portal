@@ -1,6 +1,7 @@
 
 import { Routes, Route } from 'react-router-dom';
 import './App.css';
+import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Index from './pages/Index';
 import Products from './pages/Products';
@@ -21,6 +22,7 @@ import Login from './pages/Login';
 function App() {
   return (
     <div className="flex flex-col min-h-screen">
+      <Navbar />
       <main className="flex-grow">
         <Routes>
           <Route path="/" element={<Index />} />
