@@ -1,8 +1,4 @@
-
 import React from 'react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import CTASection from '@/components/CTASection';
 import { Award, CheckCircle, Shield, Users, Target, Star, Clock } from 'lucide-react';
 
 const About = () => {
@@ -71,8 +67,6 @@ const About = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navbar />
-
       <main className="flex-grow">
         {/* Hero section */}
         <section className="bg-gradient-to-r from-kimcom-800 to-kimcom-600 py-16 text-white">
@@ -242,8 +236,6 @@ const About = () => {
           bgColor="bg-kimcom-800"
         />
       </main>
-
-      <Footer />
     </div>
   );
 };

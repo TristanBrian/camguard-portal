@@ -1,7 +1,4 @@
-
 import React from 'react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -129,8 +126,6 @@ Sent from KimCom Website
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navbar />
-
       <main className="flex-grow">
         {/* Hero section */}
         <section className="bg-gradient-to-r from-kimcom-800 to-kimcom-600 py-16 text-white">
@@ -336,8 +331,6 @@ Sent from KimCom Website
           </div>
         </section>
       </main>
-
-      <Footer />
     </div>
   );
 };

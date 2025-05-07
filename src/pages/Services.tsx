@@ -1,6 +1,4 @@
 import React from 'react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import ServiceCard from '@/components/ServiceCard';
 import CTASection from '@/components/CTASection';
 import { Button } from '@/components/ui/button';
@@ -216,8 +214,6 @@ const Services = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navbar />
-
       <main className="flex-grow">
         {/* Hero section */}
         <section className="bg-gradient-to-r from-kimcom-800 to-kimcom-600 py-16 text-white">
@@ -411,8 +407,6 @@ const Services = () => {
           bgColor="bg-kimcom-800"
         />
       </main>
-
-      <Footer />
     </div>
   );
 };
