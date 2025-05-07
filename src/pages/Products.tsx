@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from '@/components/ProductCard';
@@ -84,8 +85,24 @@ const Products = () => {
         
         if (productsData && productsData.length > 0) {
           console.log(`Successfully loaded ${productsData.length} products`);
-          setProducts(productsData);
-          toast.success(`Loaded ${productsData.length} products`);
+          
+          // Ensure all products conform to the Product interface before setting state
+          const typedProducts: Product[] = productsData.map((product: any) => ({
+            id: product.id || crypto.randomUUID(),
+            name: product.name || '',
+            price: Number(product.price || 0),
+            stock: Number(product.stock || 0),
+            category: product.category || '',
+            sku: product.sku || '',
+            description: product.description || '',
+            image: product.image || '/placeholder.svg',
+            difficulty: (product.difficulty as 'Easy' | 'Medium' | 'Advanced') || 'Medium',
+            brand: product.brand || '',
+            model: product.model || ''
+          }));
+          
+          setProducts(typedProducts);
+          toast.success(`Loaded ${typedProducts.length} products`);
         } else {
           console.log("No products found in the database");
           setError("No products found. You may need to add some products in the admin dashboard.");
