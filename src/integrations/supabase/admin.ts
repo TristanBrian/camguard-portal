@@ -32,7 +32,9 @@ export const fetchProducts = async (): Promise<Product[]> => {
       sku: product.sku || '',
       description: product.description || '',
       image: product.image || '/placeholder.svg',
-      difficulty: product.difficulty || 'Medium' as 'Easy' | 'Medium' | 'Advanced'
+      difficulty: product.difficulty || 'Medium' as 'Easy' | 'Medium' | 'Advanced',
+      brand: product.brand || '',
+      model: product.model || ''
     }));
     
     return typedProducts;
