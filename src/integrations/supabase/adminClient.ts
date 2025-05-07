@@ -1,22 +1,22 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { checkIfAdmin } from '@/utils/adminAuth';
 
 const SUPABASE_URL = "https://lcqrwhnpscchimjqysau.supabase.co";
-const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjcXJ3aG5wc2NjaGltanF5c2F1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NTM0MzI3NywiZXhwIjoyMDYwOTE5Mjc3fQ.wGjkk1Z2RkMyn7ctiR7ycjKDFXQzeMlft3FsK1tc2LM";
+// We need to use the correct Supabase anon key, not the service role key
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjcXJ3aG5wc2NjaGltanF5c2F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUzNDMyNzcsImV4cCI6MjA2MDkxOTI3N30.sMTduMkGxUTbEFnnPvkpUlEeQ3yz96_mlzD_XGWEj0U";
 
 // Create a special admin client that can bypass RLS
 // WARNING: This should only be used on the admin pages with proper authentication checks
-export const adminClient = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+export const adminClient = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
   },
   global: {
     headers: {
-      'apikey': SUPABASE_SERVICE_KEY,
-      'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       'x-client-info': 'kimcom-security-admin',
     },
     // Increase fetch timeout for better reliability
@@ -125,87 +125,39 @@ export const debugFetchProducts = async () => {
       // Continue with fetch anyway since we want to try public RLS policy
     }
     
-    // Try to fetch products using the service role client directly
-    const { data: adminProducts, error: adminError } = await adminClient
+    // Try to fetch products using the client
+    const { data: products, error } = await adminClient
       .from('products')
       .select('*')
       .order('created_at', { ascending: false });
       
-    if (adminError) {
-      console.error("Debug admin fetch error:", adminError);
+    if (error) {
+      console.error("Debug fetch error:", error);
       
       // Check if the error is related to authentication or permission
-      if (adminError.message?.includes('auth') || adminError.message?.includes('permission')) {
-        console.log("Authentication error detected, trying direct SQL query...");
+      if (error.message?.includes('auth') || error.message?.includes('permission')) {
+        console.log("Authentication error detected, trying public client...");
         
-        // Try a direct SQL query as a last resort - Fixed this part to use a proper RPC function
-        try {
-          // Instead of using a non-existent RPC function, use a direct SQL query
-          const { data: sqlData, error: sqlError } = await adminClient
-            .from('products')
-            .select('*')
-            .limit(100);
-          
-          if (sqlError) {
-            console.error("SQL query error:", sqlError);
-          } else if (sqlData && Array.isArray(sqlData) && sqlData.length > 0) {
-            console.log(`SQL query returned ${sqlData.length} products`);
-            return sqlData;
-          }
-        } catch (sqlErr) {
-          console.error("SQL query exception:", sqlErr);
-        }
-      }
-    } else if (adminProducts && Array.isArray(adminProducts) && adminProducts.length > 0) {
-      console.log(`Successfully loaded ${adminProducts.length} products with adminClient:`, adminProducts);
-      return adminProducts;
-    } else {
-      console.log("No products found with adminClient");
-    }
-      
-    // If admin client didn't work or returned no products, try public client as fallback
-    console.log("Trying with public client as fallback...");
-    const { data: publicData, error: publicError } = await supabase
-      .from('products')
-      .select('*')
-      .order('created_at', { ascending: false });
-      
-    if (publicError) {
-      console.error("Public client fetch error:", publicError);
-      
-      // This might be our last chance, so try a direct insert to see if that works
-      try {
-        console.log("Attempting to create a test product to verify database connectivity...");
-        const testProduct = {
-          name: "Test Product - Debug Insert",
-          price: 0,
-          stock: 999,
-          category: "TEST",
-          sku: `TEST-${Date.now()}`,
-          description: "This is a test product to verify database connectivity",
-          image: "/placeholder.svg"
-        };
-        
-        const { data: insertData, error: insertError } = await adminClient
+        // Try with the public client as fallback
+        const { data: publicData, error: publicError } = await supabase
           .from('products')
-          .insert([testProduct])
-          .select();
+          .select('*')
+          .order('created_at', { ascending: false });
           
-        if (insertError) {
-          console.error("Test insert failed:", insertError);
-        } else if (insertData) {
-          console.log("Test insert succeeded! Database is writable:", insertData);
-          return [testProduct];
+        if (publicError) {
+          console.error("Public client fetch error:", publicError);
+          throw publicError;
+        } else {
+          console.log(`Public client fetch returned ${publicData?.length || 0} products:`, publicData);
+          return publicData || [];
         }
-      } catch (insertErr) {
-        console.error("Test insert exception:", insertErr);
       }
       
-      throw new Error(`Failed to fetch products: ${publicError.message}`);
-    } else {
-      console.log(`Public client fetch returned ${publicData?.length || 0} products:`, publicData);
-      return publicData || [];
+      throw error;
     }
+    
+    console.log(`Successfully loaded ${products?.length || 0} products:`, products);
+    return products || [];
   } catch (err) {
     console.error("Debug fetch exception:", err);
     throw err;
@@ -215,7 +167,7 @@ export const debugFetchProducts = async () => {
 // Function to force an insert directly to the database bypassing RLS
 export const forceInsertProduct = async (productData) => {
   try {
-    console.log("Force inserting product with service role client:", productData);
+    console.log("Inserting product:", productData);
     
     // Ensure the required fields have default values to prevent DB errors
     const safeProductData = {
@@ -230,20 +182,25 @@ export const forceInsertProduct = async (productData) => {
       ...productData
     };
     
+    // Since we're using the anon key now, we should use local auth to determine if user is admin
+    if (!checkIfAdmin()) {
+      throw new Error("Admin authentication required for this operation");
+    }
+    
     const { data, error } = await adminClient
       .from('products')
       .insert([safeProductData])
       .select();
       
     if (error) {
-      console.error("Force insert error:", error);
+      console.error("Insert error:", error);
       throw error;
     }
     
-    console.log("Product force inserted successfully:", data);
+    console.log("Product inserted successfully:", data);
     return data;
   } catch (err) {
-    console.error("Force insert exception:", err);
+    console.error("Insert exception:", err);
     throw err;
   }
 };

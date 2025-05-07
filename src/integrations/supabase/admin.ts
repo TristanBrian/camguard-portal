@@ -1,3 +1,4 @@
+
 import { supabase } from './client';
 import { adminClient, debugFetchProducts, forceInsertProduct } from './adminClient';
 import { toast } from 'sonner';
@@ -40,6 +41,44 @@ export const isAdmin = async () => {
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
     console.log("Fetching products via admin.ts");
+    
+    // First try using supabase client for better auth handling
+    try {
+      const { data: products, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error("Error fetching with supabase client:", error);
+        throw error;
+      }
+      
+      if (products && products.length > 0) {
+        console.log("Successfully fetched products with supabase client:", products);
+        
+        // Ensure products conform to the Product type
+        const typedProducts: Product[] = products.map((product: any) => ({
+          id: product.id || crypto.randomUUID(),
+          name: product.name,
+          price: Number(product.price),
+          stock: Number(product.stock),
+          category: product.category,
+          sku: product.sku || '',
+          description: product.description || '',
+          image: product.image || '/placeholder.svg',
+          difficulty: (product.difficulty as 'Easy' | 'Medium' | 'Advanced') || 'Medium',
+          brand: product.brand || '',
+          model: product.model || ''
+        }));
+        
+        return typedProducts;
+      }
+    } catch (e) {
+      console.error("Fallback to debugFetchProducts due to:", e);
+    }
+    
+    // If supabase client fails, fall back to debug fetch
     const productsData = await debugFetchProducts();
     
     // Ensure products conform to the Product type
@@ -68,8 +107,32 @@ export const fetchProducts = async (): Promise<Product[]> => {
 export const addProduct = async (productData: any) => {
   try {
     console.log("Adding product via admin.ts:", productData);
-    const result = await forceInsertProduct(productData);
-    return result;
+    
+    // First check if admin
+    if (!checkIfAdmin()) {
+      toast.error("Admin authentication required to add products");
+      throw new Error("Admin authentication required");
+    }
+    
+    // Try with regular supabase client first
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .insert([productData])
+        .select();
+      
+      if (error) {
+        console.error("Error adding product with supabase client:", error);
+        // Fall back to force insert
+        return forceInsertProduct(productData);
+      }
+      
+      console.log("Product added successfully with supabase client:", data);
+      return data;
+    } catch (e) {
+      console.error("Fallback to forceInsertProduct due to:", e);
+      return forceInsertProduct(productData);
+    }
   } catch (error) {
     console.error("Error in addProduct:", error);
     throw error;
