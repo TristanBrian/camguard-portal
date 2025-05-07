@@ -129,20 +129,35 @@ export const addProduct = async (productData: any) => {
     try {
       const { data, error } = await supabase
         .from('products')
-        .insert([productData])
+        .insert(productData)
         .select();
       
       if (error) {
         console.error("Error adding product with supabase client:", error);
         // Fall back to force insert
-        return forceInsertProduct(productData);
+        const result = await forceInsertProduct(productData);
+        if (!result || result.length === 0) {
+          throw new Error("Failed to add product");
+        }
+        
+        // We were able to add a product via the fallback method, so we can inform the user
+        toast.success("Product added in development mode");
+        return result;
       }
       
       console.log("Product added successfully with supabase client:", data);
       return data;
     } catch (e) {
       console.error("Fallback to forceInsertProduct due to:", e);
-      return forceInsertProduct(productData);
+      const result = await forceInsertProduct(productData);
+      
+      if (!result || result.length === 0) {
+        throw new Error("Failed to add product");
+      }
+      
+      // We were able to add a product via the fallback method, so we can inform the user
+      toast.success("Product added in development mode");
+      return result;
     }
   } catch (error) {
     console.error("Error in addProduct:", error);
