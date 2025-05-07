@@ -23,19 +23,24 @@ export const fetchProducts = async (): Promise<Product[]> => {
     const products = await debugFetchProducts();
     
     // Ensure products conform to the Product type
-    const typedProducts: Product[] = products.map(product => ({
-      id: product.id || crypto.randomUUID(),
-      name: product.name,
-      price: Number(product.price),
-      stock: Number(product.stock),
-      category: product.category,
-      sku: product.sku || '',
-      description: product.description || '',
-      image: product.image || '/placeholder.svg',
-      difficulty: product.difficulty || 'Medium' as 'Easy' | 'Medium' | 'Advanced',
-      brand: product.brand || '',
-      model: product.model || ''
-    }));
+    const typedProducts: Product[] = products.map(product => {
+      // Generate a unique ID if one doesn't exist
+      const id = product.id || crypto.randomUUID();
+      
+      return {
+        id,
+        name: product.name,
+        price: Number(product.price),
+        stock: Number(product.stock),
+        category: product.category,
+        sku: product.sku || '',
+        description: product.description || '',
+        image: product.image || '/placeholder.svg',
+        difficulty: (product.difficulty as 'Easy' | 'Medium' | 'Advanced') || 'Medium',
+        brand: product.brand || '',
+        model: product.model || ''
+      };
+    });
     
     return typedProducts;
   } catch (error) {
