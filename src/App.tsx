@@ -20,6 +20,11 @@ import MarketTrends from './pages/admin/MarketTrends';
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
 
+// Import placeholder components for new admin routes
+const OrdersManager = () => <div className="p-6"><h1 className="text-2xl font-bold mb-4">Orders Management</h1><p className="text-gray-500">This feature is coming soon.</p></div>;
+const CustomersManager = () => <div className="p-6"><h1 className="text-2xl font-bold mb-4">Customers Management</h1><p className="text-gray-500">This feature is coming soon.</p></div>;
+const ReportsManager = () => <div className="p-6"><h1 className="text-2xl font-bold mb-4">Reports</h1><p className="text-gray-500">This feature is coming soon.</p></div>;
+
 function App() {
   return (
     <div className="flex flex-col min-h-screen">
@@ -37,11 +42,18 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/admin-login" element={<AdminLogin />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/admin/products" element={<ProductManager />} />
-          <Route path="/admin/products/edit/:id" element={<ProductManager />} />
-          <Route path="/admin/statistics" element={<Statistics />} />
-          <Route path="/admin/market-trends" element={<MarketTrends />} />
+          
+          {/* Admin routes */}
+          <Route path="/admin" element={<Admin />}>
+            <Route path="products" element={<ProductManager />} />
+            <Route path="products/edit/:id" element={<ProductManager />} />
+            <Route path="statistics" element={<Statistics />} />
+            <Route path="market-trends" element={<MarketTrends />} />
+            <Route path="orders" element={<OrdersManager />} />
+            <Route path="customers" element={<CustomersManager />} />
+            <Route path="reports" element={<ReportsManager />} />
+          </Route>
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

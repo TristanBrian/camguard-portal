@@ -2,7 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from '@/components/ui/sidebar';
-import { Home, Package, BarChart2, TrendingUp, Settings, LogOut, Shield } from 'lucide-react';
+import { 
+  Home, Package, BarChart2, TrendingUp, Settings, LogOut, Shield, Menu, X,
+  Users, ShoppingBag, Bell, FileText, PieChart
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import AdminDashboard from '@/components/admin/AdminDashboard';
@@ -13,6 +16,8 @@ import { supabase } from '@/integrations/supabase/client';
 const Admin: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(() => {
     // Determine the selected item based on the current path
     const path = location.pathname;
@@ -20,6 +25,9 @@ const Admin: React.FC = () => {
     if (path.includes('statistics')) return 'statistics';
     if (path.includes('market-trends')) return 'trends';
     if (path.includes('settings')) return 'settings';
+    if (path.includes('orders')) return 'orders';
+    if (path.includes('customers')) return 'customers';
+    if (path.includes('reports')) return 'reports';
     return 'dashboard';
   });
   
@@ -27,7 +35,9 @@ const Admin: React.FC = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        setIsLoading(true);
         await ensureAdminAuth();
+        setIsLoading(false);
       } catch (error) {
         console.error("Admin authentication check failed:", error);
         toast.error("Authentication required for admin access");
@@ -41,6 +51,7 @@ const Admin: React.FC = () => {
   const handleNavigation = (path: string, item: string) => {
     setSelectedItem(item);
     navigate(path);
+    setIsMobileMenuOpen(false);
   };
 
   const handleLogout = async () => {
@@ -75,6 +86,17 @@ const Admin: React.FC = () => {
 
   // Determine what to render in the main content area
   const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="inline-block animate-spin h-8 w-8 border-4 border-kimcom-600 border-t-transparent rounded-full mb-4"></div>
+            <p>Loading admin panel...</p>
+          </div>
+        </div>
+      );
+    }
+    
     // For paths that match specific routes, we'll show the <Outlet> component
     // which will render the nested route component
     if (location.pathname !== '/admin' && location.pathname !== '/admin/dashboard') {
@@ -94,7 +116,20 @@ const Admin: React.FC = () => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-100">
-        <Sidebar>
+        {/* Mobile Menu Button - Only visible on mobile */}
+        <div className="block md:hidden fixed top-4 left-4 z-50">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="bg-white"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
+
+        {/* Sidebar with responsive behavior */}
+        <Sidebar className={`${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 fixed md:relative z-40`}>
           <SidebarHeader className="border-b border-gray-200 p-4">
             <div className="flex items-center space-x-2">
               <Shield className="h-6 w-6 text-kimcom-600" />
@@ -125,12 +160,42 @@ const Admin: React.FC = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton 
+                  isActive={selectedItem === 'orders'}
+                  onClick={() => handleNavigation('/admin/orders', 'orders')}
+                  tooltip="Order Management"
+                >
+                  <ShoppingBag className="h-5 w-5" />
+                  <span>Orders</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  isActive={selectedItem === 'customers'}
+                  onClick={() => handleNavigation('/admin/customers', 'customers')}
+                  tooltip="Customer Management"
+                >
+                  <Users className="h-5 w-5" />
+                  <span>Customers</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
                   isActive={selectedItem === 'statistics'}
                   onClick={() => handleNavigation('/admin/statistics', 'statistics')}
                   tooltip="Website Statistics"
                 >
                   <BarChart2 className="h-5 w-5" />
                   <span>Statistics</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  isActive={selectedItem === 'reports'}
+                  onClick={() => handleNavigation('/admin/reports', 'reports')}
+                  tooltip="Reports"
+                >
+                  <FileText className="h-5 w-5" />
+                  <span>Reports</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -166,7 +231,16 @@ const Admin: React.FC = () => {
             </Button>
           </SidebarFooter>
         </Sidebar>
-        <div className="flex-grow p-6 overflow-auto">
+        
+        {/* Main content area with more padding on mobile */}
+        <div className="flex-grow p-4 md:p-6 overflow-auto pt-16 md:pt-6">
+          {/* Overlay for mobile menu */}
+          {isMobileMenuOpen && (
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+              onClick={() => setIsMobileMenuOpen(false)} 
+            />
+          )}
           {renderContent()}
         </div>
       </div>
