@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,8 +5,8 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Lock, User } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import { supabase } from "@/integrations/supabase/client";
-import { isAdmin } from "@/integrations/supabase/admin";
+import { supabase } from '@/integrations/supabase/client';
+import { isAdmin } from '@/integrations/supabase/admin';
 
 import { useLocation } from 'react-router-dom';
 
@@ -43,21 +42,7 @@ const AdminLogin: React.FC = () => {
     e.preventDefault();
     setLoading(true);
 
-    // First check for hardcoded admin email/password
-    if (email.trim().toLowerCase() === "admin@kimcom.com" && password === "admin123") {
-      toast.success('Admin login successful');
-      // Store admin info in localStorage for persistence
-      localStorage.setItem('kimcom_current_user', JSON.stringify({
-        id: 'admin-hardcoded',
-        email: 'admin@kimcom.com',
-        role: 'admin'
-      }));
-      navigate('/admin');
-      setLoading(false);
-      return;
-    }
-
-    // Otherwise, try Supabase sign in
+    // Try Supabase sign in
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,

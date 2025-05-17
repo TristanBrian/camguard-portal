@@ -81,7 +81,7 @@ const Navbar = () => {
   };
 
   const handleCartClick = () => {
-    navigate('/products');
+    navigate('/checkout');
     // Trigger cart popover to open via localStorage
     localStorage.setItem('open_cart_popover', 'true');
     // Force update of cart count
