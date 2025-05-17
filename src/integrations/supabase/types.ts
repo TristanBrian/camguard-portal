@@ -9,6 +9,65 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_notifications: {
+        Row: {
+          id: string
+          message: string
+          order_id: string | null
+          read: boolean
+          timestamp: string
+        }
+        Insert: {
+          id?: string
+          message: string
+          order_id?: string | null
+          read?: boolean
+          timestamp?: string
+        }
+        Update: {
+          id?: string
+          message?: string
+          order_id?: string | null
+          read?: boolean
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_notifications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          date: string
+          id: string
+          items: Json
+          status: string
+          total: number
+          userid: string
+        }
+        Insert: {
+          date?: string
+          id?: string
+          items: Json
+          status?: string
+          total: number
+          userid: string
+        }
+        Update: {
+          date?: string
+          id?: string
+          items?: Json
+          status?: string
+          total?: number
+          userid?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           brand: string | null
@@ -57,6 +116,42 @@ export type Database = {
           sku?: string
           stock?: number
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string
+          features: string[]
+          icon: string | null
+          id: string
+          price: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description: string
+          features?: string[]
+          icon?: string | null
+          id?: string
+          price: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string
+          features?: string[]
+          icon?: string | null
+          id?: string
+          price?: number
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
