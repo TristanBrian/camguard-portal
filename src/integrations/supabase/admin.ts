@@ -177,3 +177,123 @@ export const initDevelopmentEnvironment = async () => {
     }
   }
 };
+
+// Add isAdmin function to check if user has admin role
+export const isAdmin = async () => {
+  try {
+    // First check for localStorage admin
+    if (checkIfAdmin()) {
+      return true;
+    }
+    
+    // Then check for Supabase role
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return false;
+    
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', session.user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
+      
+    if (error) {
+      console.error('Error checking admin status:', error);
+      return false;
+    }
+    
+    return !!data;
+  } catch (error) {
+    console.error('Exception checking admin status:', error);
+    return false;
+  }
+};
+
+// Get product statistics for admin dashboard
+export const getProductStats = async () => {
+  try {
+    if (!checkIfAdmin()) {
+      throw new Error('Admin authentication required');
+    }
+    
+    const { data, error } = await supabase
+      .from('products')
+      .select('*');
+      
+    if (error) {
+      throw error;
+    }
+    
+    const products = data || [];
+    
+    // Calculate various statistics
+    const totalProducts = products.length;
+    const totalValue = products.reduce((sum, product) => sum + (Number(product.price) * Number(product.stock)), 0);
+    const totalStock = products.reduce((sum, product) => sum + Number(product.stock), 0);
+    const lowStockProducts = products.filter(product => Number(product.stock) < 5).length;
+    const outOfStockProducts = products.filter(product => Number(product.stock) <= 0).length;
+    
+    // Calculate category statistics
+    const categoryCounts: Record<string, number> = {};
+    const categoryValue: Record<string, number> = {};
+    
+    products.forEach(product => {
+      const category = product.category || 'Uncategorized';
+      categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+      categoryValue[category] = (categoryValue[category] || 0) + (Number(product.price) * Number(product.stock));
+    });
+    
+    // Get low stock items
+    const lowStockItems = products
+      .filter(product => Number(product.stock) < 5)
+      .map(product => ({ 
+        id: product.id, 
+        name: product.name, 
+        stock: product.stock,
+        category: product.category
+      }));
+    
+    return {
+      totalProducts,
+      totalValue,
+      totalStock,
+      lowStockCount: lowStockProducts,
+      outOfStockCount: outOfStockProducts,
+      categoryCounts,
+      categoryValue,
+      lowStockItems
+    };
+  } catch (error) {
+    console.error('Error getting product stats:', error);
+    
+    // Development fallback
+    if (process.env.NODE_ENV === 'development') {
+      // Return mock statistics
+      return {
+        totalProducts: 8,
+        totalValue: 12500,
+        totalStock: 45,
+        lowStockCount: 2,
+        outOfStockCount: 1,
+        categoryCounts: {
+          'CCTV': 3,
+          'Network': 2,
+          'Access Control': 2,
+          'Alarms': 1
+        },
+        categoryValue: {
+          'CCTV': 6000,
+          'Network': 2500,
+          'Access Control': 3000,
+          'Alarms': 1000
+        },
+        lowStockItems: [
+          { id: 'mock-1', name: 'IP Camera', stock: 2, category: 'CCTV' },
+          { id: 'mock-2', name: 'Motion Sensor', stock: 3, category: 'Alarms' }
+        ]
+      };
+    }
+    
+    throw error;
+  }
+};

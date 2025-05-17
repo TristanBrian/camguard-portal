@@ -38,7 +38,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { 
   adminClient, 
   ensureAdminAuth, 
-  debugFetchProducts, 
+  debugFetchProducts,
   forceInsertProduct,
   createTestProducts,
   verifyProductsTable

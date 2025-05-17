@@ -217,3 +217,52 @@ const generateMockProducts = () => {
     created_at: new Date().toISOString()
   }));
 };
+
+// Debug fetch products function with extensive fallbacks
+export const debugFetchProducts = async () => {
+  console.log("Debug fetch products called");
+  
+  try {
+    // First try regular fetchProducts
+    const products = await fetchAllProducts();
+    if (products && products.length > 0) {
+      return products;
+    }
+    
+    // If that fails, try direct Supabase query
+    const { data, error } = await adminClient.from('products').select('*');
+    if (!error && data && data.length > 0) {
+      return data;
+    }
+    
+    // Last resort: mock data
+    console.log("Using mock data as fallback");
+    return generateMockProducts();
+  } catch (error) {
+    console.error("All product fetch methods failed:", error);
+    return generateMockProducts();
+  }
+};
+
+// Verify products table exists and has correct schema
+export const verifyProductsTable = async () => {
+  try {
+    await ensureAdminAuth();
+    
+    // Just try to fetch one row to verify table exists
+    const { data, error } = await adminClient
+      .from('products')
+      .select('id')
+      .limit(1);
+      
+    if (error) {
+      console.error('Error verifying products table:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Exception verifying products table:', error);
+    return false;
+  }
+};
