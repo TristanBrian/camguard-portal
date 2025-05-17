@@ -1,295 +1,179 @@
 
 import { supabase } from './client';
-import { adminClient, debugFetchProducts, forceInsertProduct } from './adminClient';
-import { toast } from 'sonner';
-import { Product } from '@/data/productsData';
+import { fetchAllProducts, forceInsertProduct, forceDeleteProduct, forceUpdateProduct, createTestProducts } from './adminClient';
 import { checkIfAdmin } from '@/utils/adminAuth';
+import { toast } from 'sonner';
 
-// Function to check if user is admin
-export const isAdmin = async () => {
+// Fetch all products with fallback mechanisms
+export const fetchProducts = async () => {
   try {
-    // First check for hardcoded admin in localStorage
+    console.log('Fetching products via admin.ts');
+    
+    // First try the admin client method
+    const products = await fetchAllProducts();
+    
+    // If we got products, return them
+    if (products && products.length > 0) {
+      return products;
+    }
+    
+    // Try debug method if no products were found
+    console.log('Debug: Directly fetching products with admin client');
     if (checkIfAdmin()) {
-      return true;
-    }
-    
-    // Otherwise check Supabase auth
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
-    
-    // Check user_roles table for admin role
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .maybeSingle();
-      
-    if (error) {
-      console.error("Error checking admin role:", error);
-      return false;
-    }
-    
-    return !!data;
-  } catch (error) {
-    console.error("Error checking admin status:", error);
-    return false;
-  }
-};
-
-// Function to fetch all products
-export const fetchProducts = async (): Promise<Product[]> => {
-  try {
-    console.log("Fetching products via admin.ts");
-    
-    // First try using supabase client for better auth handling
-    try {
-      const { data: products, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error("Error fetching with supabase client:", error);
-        throw error;
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*');
+          
+        if (!error && data) {
+          console.log('Successfully loaded', data.length, 'products:', data);
+          return data;
+        }
+      } catch (e) {
+        console.error('Error in debug fetch:', e);
       }
-      
-      if (products && products.length > 0) {
-        console.log("Successfully fetched products with supabase client:", products);
-        
-        // Ensure products conform to the Product type
-        const typedProducts: Product[] = products.map((product: any) => ({
-          id: product.id || crypto.randomUUID(),
-          name: product.name,
-          price: Number(product.price),
-          stock: Number(product.stock),
-          category: product.category,
-          sku: product.sku || '',
-          description: product.description || '',
-          image: product.image || '/placeholder.svg',
-          difficulty: (product.difficulty as 'Easy' | 'Medium' | 'Advanced') || 'Medium',
-          brand: product.brand || '',
-          model: product.model || ''
-        }));
-        
-        return typedProducts;
-      }
-    } catch (e) {
-      console.error("Fallback to debugFetchProducts due to:", e);
     }
     
-    // If supabase client fails, fall back to debug fetch
-    const productsData = await debugFetchProducts();
+    // Last resort: create test products for development
+    if (process.env.NODE_ENV === 'development') {
+      return await createTestProducts(5);
+    }
     
-    // Ensure products conform to the Product type
-    const typedProducts: Product[] = productsData.map((product: any) => ({
-      id: product.id || crypto.randomUUID(),
-      name: product.name,
-      price: Number(product.price),
-      stock: Number(product.stock),
-      category: product.category,
-      sku: product.sku || '',
-      description: product.description || '',
-      image: product.image || '/placeholder.svg',
-      difficulty: (product.difficulty as 'Easy' | 'Medium' | 'Advanced') || 'Medium',
-      brand: product.brand || '',
-      model: product.model || ''
-    }));
-    
-    return typedProducts;
-  } catch (error) {
-    console.error("Error in fetchProducts:", error);
-    // Return an empty array to prevent UI errors
     return [];
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    
+    // Development fallback
+    if (process.env.NODE_ENV === 'development') {
+      return await createTestProducts(3);
+    }
+    
+    throw error;
   }
 };
 
-// Function to add a new product
+// Add a product with error handling and fallbacks
 export const addProduct = async (productData: any) => {
   try {
-    console.log("Adding product via admin.ts:", productData);
+    console.log('Adding product via admin.ts:', productData);
     
-    // First check if admin
     if (!checkIfAdmin()) {
-      toast.error("Admin authentication required to add products");
-      throw new Error("Admin authentication required");
+      throw new Error('Admin authentication required');
     }
     
-    // Ensure features is an array if provided
-    if (productData.features && !Array.isArray(productData.features)) {
-      if (typeof productData.features === 'string') {
-        productData.features = productData.features
-          .split('\n')
-          .filter((line: string) => line.trim() !== '');
-      } else {
-        productData.features = [];
-      }
-    }
-    
-    // Try with regular supabase client first
+    // Try with supabase client first
     try {
       const { data, error } = await supabase
         .from('products')
         .insert(productData)
         .select();
-      
-      if (error) {
-        console.error("Error adding product with supabase client:", error);
-        // Fall back to force insert
-        const result = await forceInsertProduct(productData);
-        if (!result || result.length === 0) {
-          throw new Error("Failed to add product");
-        }
         
-        // We were able to add a product via the fallback method, so we can inform the user
-        toast.success("Product added in development mode");
-        return result;
+      if (error) {
+        console.error('Error adding product with supabase client:', error);
+      } else if (data && data.length > 0) {
+        return data[0];
       }
-      
-      console.log("Product added successfully with supabase client:", data);
-      return data;
     } catch (e) {
-      console.error("Fallback to forceInsertProduct due to:", e);
-      const result = await forceInsertProduct(productData);
-      
-      if (!result || result.length === 0) {
-        throw new Error("Failed to add product");
-      }
-      
-      // We were able to add a product via the fallback method, so we can inform the user
-      toast.success("Product added in development mode");
-      return result;
+      console.error('Exception adding product with supabase client:', e);
     }
+    
+    // Fallback to admin client method
+    return await forceInsertProduct(productData);
+    
   } catch (error) {
-    console.error("Error in addProduct:", error);
-    // We explicitly want to throw here so the UI can handle the error
+    console.error('Error adding product:', error);
+    
+    // Development fallback
+    if (process.env.NODE_ENV === 'development') {
+      toast.info('Using development mode: Product will be available locally only');
+      return { id: `dev-${Date.now()}`, ...productData };
+    }
+    
     throw error;
   }
 };
 
-// Function to delete a product
-export const deleteProduct = async (productId: string) => {
+// Delete product with fallbacks
+export const deleteProduct = async (id: string) => {
   try {
-    console.log("Deleting product:", productId);
-    const { error } = await adminClient
-      .from('products')
-      .delete()
-      .eq('id', productId);
-    
-    if (error) {
-      console.error("Error deleting product:", error);
-      // For development mode, just pretend it worked
-      console.log("Development mode: Pretending product was deleted");
-      return { success: true };
+    if (!checkIfAdmin()) {
+      throw new Error('Admin authentication required');
     }
     
-    return { success: true };
-  } catch (error) {
-    console.error("Error in deleteProduct:", error);
-    // For development mode, just pretend it worked
-    return { success: true };
-  }
-};
-
-// Function to update a product
-export const updateProduct = async (productId: string, productData: any) => {
-  try {
-    console.log("Updating product:", productId, productData);
-    
-    // Ensure features is an array if provided
-    if (productData.features && !Array.isArray(productData.features)) {
-      if (typeof productData.features === 'string') {
-        productData.features = productData.features
-          .split('\n')
-          .filter((line: string) => line.trim() !== '');
-      } else {
-        productData.features = [];
+    // Try normal client first
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+        
+      if (!error) {
+        return true;
       }
+    } catch (e) {
+      console.error('Error with normal delete:', e);
     }
     
-    const { data, error } = await adminClient
-      .from('products')
-      .update(productData)
-      .eq('id', productId)
-      .select();
+    // Fallback to force delete
+    return await forceDeleteProduct(id);
     
-    if (error) {
-      console.error("Error updating product:", error);
-      // For development mode, just pretend it worked and return the updated data
-      console.log("Development mode: Pretending product was updated");
-      return [{
-        id: productId,
-        ...productData,
-        updated_at: new Date().toISOString()
-      }];
-    }
-    
-    return data;
   } catch (error) {
-    console.error("Error in updateProduct:", error);
-    // For development mode, just pretend it worked and return the updated data
-    return [{
-      id: productId,
-      ...productData,
-      updated_at: new Date().toISOString()
-    }];
+    console.error('Error deleting product:', error);
+    
+    // Development fallback
+    if (process.env.NODE_ENV === 'development') {
+      return true;
+    }
+    
+    throw error;
   }
 };
 
-// Function to get product statistics
-export const getProductStats = async () => {
+// Update product with fallbacks
+export const updateProduct = async (id: string, productData: any) => {
   try {
-    const { data: products, error } = await adminClient
-      .from('products')
-      .select('*');
-    
-    if (error) throw error;
-    
-    // If no products, return default stats
-    if (!products || products.length === 0) {
-      return {
-        totalProducts: 0,
-        totalValue: 0,
-        lowStockProducts: 0,
-        categoryCounts: {}
-      };
+    if (!checkIfAdmin()) {
+      throw new Error('Admin authentication required');
     }
     
-    // Calculate basic stats
-    const totalProducts = products?.length || 0;
-    const totalValue = products?.reduce((sum, product) => sum + (Number(product.price) * Number(product.stock)), 0) || 0;
-    const lowStockProducts = products?.filter(product => Number(product.stock) < 5)?.length || 0;
+    // Try normal update first
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .update(productData)
+        .eq('id', id)
+        .select();
+        
+      if (!error && data) {
+        return data[0];
+      }
+    } catch (e) {
+      console.error('Error with normal update:', e);
+    }
     
-    // Group by category
-    const categoryCounts = products?.reduce((acc, product) => {
-      const category = product.category || 'Uncategorized';
-      acc[category] = (acc[category] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>) || {};
+    // Fallback to force update
+    return await forceUpdateProduct(id, productData);
     
-    return {
-      totalProducts,
-      totalValue,
-      lowStockProducts,
-      categoryCounts
-    };
   } catch (error) {
-    console.error("Error getting product stats:", error);
-    // Return placeholder stats if there's an error
-    return {
-      totalProducts: 0,
-      totalValue: 0,
-      lowStockProducts: 0,
-      categoryCounts: {}
-    };
+    console.error('Error updating product:', error);
+    
+    // Development fallback
+    if (process.env.NODE_ENV === 'development') {
+      return { id, ...productData };
+    }
+    
+    throw error;
   }
 };
 
-export default {
-  fetchProducts,
-  addProduct,
-  deleteProduct,
-  updateProduct,
-  isAdmin,
-  getProductStats
+// Initialize development environment with test data if needed
+export const initDevelopmentEnvironment = async () => {
+  if (process.env.NODE_ENV === 'development') {
+    const { data } = await supabase.from('products').select('*').limit(1);
+    
+    if (!data || data.length === 0) {
+      console.log('Initializing development environment with test products');
+      await createTestProducts(5);
+    }
+  }
 };

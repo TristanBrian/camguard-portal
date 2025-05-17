@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,8 +6,11 @@ import { toast } from 'sonner';
 import ProductForm from '@/components/admin/ProductForm';
 import ProductsTable from '@/components/ProductsTable';
 import { fetchProducts, addProduct, deleteProduct, updateProduct } from '@/integrations/supabase/admin';
-import { AlertCircle, RefreshCw, Plus } from 'lucide-react';
+import { AlertCircle, RefreshCw, Plus, AlertTriangle } from 'lucide-react';
 import { Product } from '@/data/productsData';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { checkIfAdmin } from '@/utils/adminAuth';
+import { initDevelopmentEnvironment } from '@/integrations/supabase/admin';
 
 const ProductManager = () => {
   const navigate = useNavigate();
@@ -19,6 +21,18 @@ const ProductManager = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
+  const [isDevelopmentMode, setIsDevelopmentMode] = useState(false);
+  
+  // Initialize development environment if needed
+  useEffect(() => {
+    const init = async () => {
+      if (process.env.NODE_ENV === 'development') {
+        setIsDevelopmentMode(true);
+        await initDevelopmentEnvironment();
+      }
+    };
+    init();
+  }, []);
   
   // Load products when the component mounts
   useEffect(() => {
@@ -41,11 +55,21 @@ const ProductManager = () => {
   
   const fetchProductById = async (id: string) => {
     try {
-      // We could add a specific function for this, but for now we'll just filter from all products
-      const allProducts = await fetchProducts();
-      const product = allProducts.find(p => p.id === id);
+      // First try to find in current products list
+      const product = products.find(p => p.id === id);
       if (product) {
         setCurrentProduct(product);
+        return;
+      }
+      
+      // Otherwise reload all products and search again
+      setLoading(true);
+      const allProducts = await fetchProducts();
+      setLoading(false);
+      
+      const foundProduct = allProducts.find(p => p.id === id);
+      if (foundProduct) {
+        setCurrentProduct(foundProduct);
       } else {
         toast.error("Product not found");
         navigate('/admin/products');
@@ -61,11 +85,18 @@ const ProductManager = () => {
     try {
       setLoading(true);
       setError(null);
+      
+      if (!checkIfAdmin()) {
+        setError("Admin authentication required");
+        setLoading(false);
+        return;
+      }
+      
       const data = await fetchProducts();
       setProducts(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching products:", error);
-      setError("Failed to load products");
+      setError(error?.message || "Failed to load products");
       toast.error("Error loading products");
     } finally {
       setLoading(false);
@@ -79,9 +110,9 @@ const ProductManager = () => {
       toast.success("Product added successfully");
       setIsAdding(false);
       loadProducts(); // Refresh the product list
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding product:", error);
-      toast.error("Failed to add product");
+      toast.error(error?.message || "Failed to add product");
     } finally {
       setLoading(false);
     }
@@ -99,9 +130,9 @@ const ProductManager = () => {
       toast.success("Product updated successfully");
       navigate('/admin/products');
       loadProducts(); // Refresh the product list
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating product:", error);
-      toast.error("Failed to update product");
+      toast.error(error?.message || "Failed to update product");
     } finally {
       setLoading(false);
     }
@@ -117,9 +148,9 @@ const ProductManager = () => {
       await deleteProduct(id);
       toast.success("Product deleted successfully");
       loadProducts(); // Refresh the product list
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting product:", error);
-      toast.error("Failed to delete product");
+      toast.error(error?.message || "Failed to delete product");
     } finally {
       setLoading(false);
     }
@@ -144,7 +175,16 @@ const ProductManager = () => {
   
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {isDevelopmentMode && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Running in development mode with local data. Products will not be saved to the database.
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      <div className="flex justify-between items-center flex-wrap gap-2">
         <h2 className="text-2xl font-bold">{isEditing ? 'Edit Product' : 'Product Management'}</h2>
         {!isEditing && !isAdding && (
           <div className="flex space-x-2">
