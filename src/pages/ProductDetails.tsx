@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+import { Button } from '../components/ui/button';
+import { Card, CardContent } from '../components/ui/card';
+import { Separator } from '../components/ui/separator';
 import { ShoppingCart, ArrowLeft, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../integrations/supabase/client';
@@ -110,7 +110,7 @@ const ProductDetails = () => {
   const handleBuyNow = () => {
     if (!isLoggedIn) {
       toast.error("Please login to purchase");
-      navigate('/admin-login');
+      navigate('/login');
       return;
     }
 

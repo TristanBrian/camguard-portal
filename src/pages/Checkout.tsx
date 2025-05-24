@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -21,6 +21,33 @@ import { useCart as useCartContext } from '../contexts/CartContext';
 const Checkout = () => {
   const navigate = useNavigate();
   const { cartItems, products, emptyCart } = useCart();
+
+  useEffect(() => {
+    const checkUserLoggedIn = async () => {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) {
+          console.error('Checkout: supabase.auth.getUser error:', error);
+        }
+        const userId = data.user?.id || null;
+
+        if (!userId) {
+          // Fallback to localStorage user ID (may not be UUID)
+          const currentUser = localStorage.getItem('kimcom_current_user');
+          const localUserId = currentUser ? JSON.parse(currentUser).id : null;
+          if (!localUserId) {
+            // Not logged in, redirect to login page
+            navigate('/login');
+          }
+        }
+      } catch (err) {
+        console.error('Checkout: checkUserLoggedIn error:', err);
+        navigate('/login');
+      }
+    };
+
+    checkUserLoggedIn();
+  }, [navigate]);
 
   const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'card' | 'ondelivery'>('mpesa');
   const [mpesaPhone] = useState('0740213382');

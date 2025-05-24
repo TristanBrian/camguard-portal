@@ -18,7 +18,6 @@ const AdminLogin: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // On mount, check if a Supabase user is logged in and is admin
     const checkAdmin = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
@@ -40,6 +39,10 @@ const AdminLogin: React.FC = () => {
       email,
       password,
     });
+
+    if (error) {
+      console.error('Supabase signInWithPassword error:', error);
+    }
 
     if (error || !data.session?.user) {
       toast.error('Invalid credentials or unable to log in');

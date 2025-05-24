@@ -17,14 +17,12 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { label: 'Settings', icon: <Settings size={16} />, path: '/manage-7s8dF3k/settings' },
   ];
 
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      toast.success('Successfully logged out');
-      navigate('/manage-7s8dF3k/login');
-    } catch (error) {
+  const handleLogout = () => {
+    toast.success('Logging out...');
+    navigate('/manage-7s8dF3k/login');
+    supabase.auth.signOut().catch(() => {
       toast.error('Error logging out');
-    }
+    });
   };
 
   return (
