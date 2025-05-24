@@ -17,5 +17,17 @@ export const supabase = supabaseUrl && supabaseAnonKey
     })
   : null;
 
+// Add global auth state change listener to handle refresh token errors
+if (supabase) {
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+      // Clear session and redirect to login page
+      supabase.auth.signOut().then(() => {
+        window.location.href = '/manage-7s8dF3k/login';
+      });
+    }
+  });
+}
+
 // Export service role key for components that need it
 export const serviceRoleKey = supabaseServiceRoleKey || null;
