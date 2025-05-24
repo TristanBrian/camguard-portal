@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldCheck, Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
@@ -17,20 +16,20 @@ const Footer = () => {
             <p className="text-gray-400 mb-6">
               Professional CCTV installation, maintenance, networking equipment, and security solutions for homes and businesses.
             </p>
-            <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Linkedin className="h-5 w-5" />
-              </a>
-            </div>
+              <div className="flex space-x-4">
+                <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
+                  <Facebook className="h-5 w-5" />
+                </a>
+                <a href="https://twitter.com/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
+                  <Twitter className="h-5 w-5" />
+                </a>
+                <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
+                  <Instagram className="h-5 w-5" />
+                </a>
+                <a href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
+                  <Linkedin className="h-5 w-5" />
+                </a>
+              </div>
           </div>
           
           {/* Quick Links */}
@@ -52,44 +51,39 @@ const Footer = () => {
               <li>
                 <Link to="/contact" className="text-gray-400 hover:text-white transition-colors">Contact</Link>
               </li>
-              <li>
-                <Link to="/admin-login?fromFooter=true" className="text-gray-400 hover:text-kimcom-400 transition-colors font-semibold">
-                  Admin Login
-                </Link>
-              </li>
             </ul>
           </div>
           
           {/* Services */}
           <div>
             <h3 className="text-lg font-semibold mb-4">Our Services</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link to="/services/cctv-installation" className="text-gray-400 hover:text-white transition-colors">
-                  CCTV Installation
-                </Link>
-              </li>
-              <li>
-                <Link to="/services/maintenance" className="text-gray-400 hover:text-white transition-colors">
-                  Maintenance & Repairs
-                </Link>
-              </li>
-              <li>
-                <Link to="/services/networking" className="text-gray-400 hover:text-white transition-colors">
-                  Network Setup
-                </Link>
-              </li>
-              <li>
-                <Link to="/services/consultation" className="text-gray-400 hover:text-white transition-colors">
-                  Security Consultation
-                </Link>
-              </li>
-              <li>
-                <Link to="/services/support" className="text-gray-400 hover:text-white transition-colors">
-                  Technical Support
-                </Link>
-              </li>
-            </ul>
+              <ul className="space-y-2">
+                <li>
+                  <Link to="/services#services" className="text-gray-400 hover:text-white transition-colors">
+                    CCTV Installation
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/services#services" className="text-gray-400 hover:text-white transition-colors">
+                    Maintenance & Repairs
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/services#services" className="text-gray-400 hover:text-white transition-colors">
+                    Network Setup
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/services#services" className="text-gray-400 hover:text-white transition-colors">
+                    Security Consultation
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/services#services" className="text-gray-400 hover:text-white transition-colors">
+                    Technical Support
+                  </Link>
+                </li>
+              </ul>
           </div>
           
           {/* Contact */}

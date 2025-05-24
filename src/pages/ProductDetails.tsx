@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -8,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ShoppingCart, ArrowLeft, Star } from 'lucide-react';
 import { toast } from 'sonner';
-import { productsData } from '@/data/productsData';
+import { supabase } from '../integrations/supabase/client';
 
 const ProductDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,13 +16,13 @@ const ProductDetails = () => {
   const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [cartItems, setCartItems] = useState<{id: string, quantity: number}[]>([]);
-  
+
   useEffect(() => {
     const user = localStorage.getItem('kimcom_current_user');
     if (user) {
       const userData = JSON.parse(user);
       setIsLoggedIn(true);
-      
+
       const userCartKey = `kimcom_cart_${userData.id}`;
       const savedCart = localStorage.getItem(userCartKey);
       if (savedCart) {
@@ -36,35 +35,67 @@ const ProductDetails = () => {
       }
     }
   }, []);
-  
+
   useEffect(() => {
-    const fetchProduct = () => {
+    const fetchProduct = async () => {
       setLoading(true);
-      // Use the real product data instead of the sample data
-      const foundProduct = productsData.find(p => p.id === id) || null;
-      setProduct(foundProduct);
+      try {
+        // Clear cache by forcing fresh fetch
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+          if (error) {
+            console.error('Error fetching product:', error);
+            setProduct(null);
+          } else {
+            // Normalize features to be an array
+            if (data.features && typeof data.features === 'string') {
+              try {
+                data.features = JSON.parse(data.features);
+              } catch (e) {
+                console.error('Error parsing product features:', e);
+                data.features = [];
+              }
+            }
+            if (!Array.isArray(data.features)) {
+              data.features = [];
+            }
+            setProduct(data);
+          }
+      } catch (err) {
+        console.error('Unexpected error fetching product:', err);
+        setProduct(null);
+      }
       setLoading(false);
     };
-    
-    fetchProduct();
+
+    if (id) {
+      fetchProduct();
+    } else {
+      setLoading(false);
+      setProduct(null);
+    }
   }, [id]);
-  
+
   const handleAddToCart = () => {
     if (!product) return;
-    
+
     const existingItem = cartItems.find(item => item.id === product.id);
-    
+
     let newCartItems;
     if (existingItem) {
-      newCartItems = cartItems.map(item => 
+      newCartItems = cartItems.map(item =>
         item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
       );
     } else {
       newCartItems = [...cartItems, { id: product.id, quantity: 1 }];
     }
-    
+
     setCartItems(newCartItems);
-    
+
     // Save to localStorage
     if (isLoggedIn) {
       const user = JSON.parse(localStorage.getItem('kimcom_current_user') || '{}');
@@ -72,21 +103,21 @@ const ProductDetails = () => {
     } else {
       localStorage.setItem('cartItems', JSON.stringify(newCartItems));
     }
-    
+
     toast.success(`Added ${product.name} to cart`);
   };
-  
+
   const handleBuyNow = () => {
     if (!isLoggedIn) {
       toast.error("Please login to purchase");
       navigate('/admin-login');
       return;
     }
-    
+
     handleAddToCart();
     navigate('/checkout');
   };
-  
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col">

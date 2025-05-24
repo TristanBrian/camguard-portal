@@ -106,27 +106,30 @@ const ProductDetailPopup: React.FC<ProductDetailPopupProps> = ({
           <div className="flex flex-col">
             <p className="text-gray-700">{product.description}</p>
             
-            {product.features && product.features.length > 0 && (
-              <div className="mt-4">
-                <h4 className="text-sm font-medium">Key Features:</h4>
-                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 mt-1">
-                  {product.features.slice(0, 4).map((feature, index) => (
-                    <li key={index}>{feature}</li>
-                  ))}
-                  {product.features.length > 4 && (
-                    <li className="list-none">
-                      <Button 
-                        variant="link" 
-                        className="p-0 h-auto text-sm"
-                        onClick={handleViewDetails}
-                      >
-                        View all features
-                      </Button>
-                    </li>
-                  )}
-                </ul>
-              </div>
-            )}
+            {product.features && product.features.length > 0 && (() => {
+const featuresArray = Array.isArray(product.features) ? product.features : (typeof product.features === 'string' ? (product.features as string).split('\n') : []);
+              return (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium">Key Features:</h4>
+                  <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 mt-1">
+                    {featuresArray.slice(0, 4).map((feature, index) => (
+                      <li key={index}>{feature}</li>
+                    ))}
+                    {featuresArray.length > 4 && (
+                      <li className="list-none">
+                        <Button 
+                          variant="link" 
+                          className="p-0 h-auto text-sm"
+                          onClick={handleViewDetails}
+                        >
+                          View all features
+                        </Button>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              );
+            })()}
             
             <div className="mt-auto">
               <div className="flex items-center justify-between mt-4">

@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useState } from 'react';
+import { Button } from 'components/ui/button';
 import { ArrowRight, Phone } from 'lucide-react';
 
 interface CTASectionProps {
@@ -10,6 +10,8 @@ interface CTASectionProps {
   secondaryButtonText?: string;
   onPrimaryClick?: () => void;
   onSecondaryClick?: () => void;
+  whatsappPhoneNumber?: string;
+  whatsappMessage?: string;
   bgColor?: string;
 }
 
@@ -20,8 +22,28 @@ const CTASection: React.FC<CTASectionProps> = ({
   secondaryButtonText,
   onPrimaryClick,
   onSecondaryClick,
+  whatsappPhoneNumber,
+  whatsappMessage,
   bgColor = 'bg-kimcom-900'
 }) => {
+  const [showCallDialog, setShowCallDialog] = useState(false);
+
+  const handleWhatsAppClick = () => {
+    if (!whatsappPhoneNumber) return;
+    const phone = whatsappPhoneNumber.startsWith('0') ? `254${whatsappPhoneNumber.substring(1)}` : whatsappPhoneNumber;
+    const message = encodeURIComponent(whatsappMessage || '');
+    const whatsappUrl = `https://wa.me/${phone}?text=${message}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const handleCallClick = () => {
+    setShowCallDialog(true);
+  };
+
+  const closeDialog = () => {
+    setShowCallDialog(false);
+  };
+
   return (
     <div className={`${bgColor} py-16`}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -47,8 +69,8 @@ const CTASection: React.FC<CTASectionProps> = ({
               <Button 
                 size="lg" 
                 variant="outline" 
-                onClick={onSecondaryClick}
-                className="border-white text-white hover:bg-white/10"
+                onClick={whatsappPhoneNumber ? handleWhatsAppClick : handleCallClick}
+                className="border-white text-white bg-white/20"
               >
                 <Phone className="mr-2 h-5 w-5" />
                 {secondaryButtonText}
@@ -57,6 +79,20 @@ const CTASection: React.FC<CTASectionProps> = ({
           </div>
         </div>
       </div>
+
+      {showCallDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold mb-4">Call Us Now</h3>
+            <p className="mb-6 text-gray-700">Phone: <a href="tel:0740213382" className="text-kimcom-700 underline">0740213382</a></p>
+            <div className="flex justify-end">
+              <Button onClick={closeDialog} className="bg-kimcom-600 hover:bg-kimcom-700 text-white">
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

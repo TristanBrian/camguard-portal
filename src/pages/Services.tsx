@@ -1,9 +1,9 @@
 import React from 'react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import ServiceCard from '@/components/ServiceCard';
-import CTASection from '@/components/CTASection';
-import { Button } from '@/components/ui/button';
+import Navbar from 'components/Navbar';
+import Footer from 'components/Footer';
+import ServiceCard from 'components/ServiceCard';
+import CTASection from 'components/CTASection';
+import { Button } from 'components/ui/button';
 import { 
   Camera, 
   Video, 
@@ -290,7 +290,7 @@ const Services = () => {
         </section>
 
         {/* Detailed Services */}
-        <section className="py-16 bg-white">
+        <section id="services" className="py-16 bg-white">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-3xl mx-auto mb-16">
               <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-4">Our Detailed Services</h2>
@@ -406,7 +406,7 @@ const Services = () => {
         <CTASection
           title="Ready to enhance your security?"
           description="Contact us today for a free consultation and quote on your security system needs."
-          primaryButtonText="Request a Quote"
+          primaryButtonText=""
           secondaryButtonText="Call Us Now"
           bgColor="bg-kimcom-800"
         />

@@ -1,17 +1,25 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from 'components/ui/button';
 import { ShieldCheck, Video, Wifi } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Hero = () => {
+  const navigate = useNavigate();
+
   const handleWhatsAppClick = () => {
     // Format phone number for WhatsApp link
-    const phoneNumber = "254740133382"; // Phone number in international format
+    const phoneNumber = "0740213382";
+    const formattedPhone = phoneNumber.startsWith('0') ? `254${phoneNumber.substring(1)}` : phoneNumber;
     const message = encodeURIComponent("Subject: Enquiry\n\nHello, I would like to request a quote for your services.");
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+    const whatsappUrl = `https://wa.me/${formattedPhone}?text=${message}`;
 
     // Open WhatsApp in a new tab
     window.open(whatsappUrl, '_blank');
+  };
+
+  const handleExploreProductsClick = () => {
+    navigate('/products');
   };
   
   return (
@@ -33,7 +41,7 @@ const Hero = () => {
               <Button size="lg" className="bg-kimcom-600 hover:bg-kimcom-700" onClick={handleWhatsAppClick}>
                 Request a Quote
               </Button>
-              <Button size="lg" variant="outline">
+              <Button size="lg" variant="outline" onClick={handleExploreProductsClick}>
                 Explore Products
               </Button>
             </div>

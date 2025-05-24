@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from 'components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, ShieldCheck, ShoppingCart, Phone, Lock, User, UserCircle2, LogOut } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -81,7 +81,7 @@ const Navbar = () => {
   };
 
   const handleCartClick = () => {
-    navigate('/products');
+    navigate('/checkout');
     // Trigger cart popover to open via localStorage
     localStorage.setItem('open_cart_popover', 'true');
     // Force update of cart count

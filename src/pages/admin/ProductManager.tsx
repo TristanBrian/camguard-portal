@@ -10,7 +10,7 @@ import { Package, PlusCircle, Search, MoreVertical, Edit, Trash, ArrowUpDown, Do
 import { toast } from 'sonner';
 import ProductForm from '@/components/admin/ProductForm';
 import { useNavigate } from 'react-router-dom';
-import { Product } from 'data/productsData';
+import type { Product } from '../../data/productsData';
 import { fetchProducts, createProduct, updateProduct, deleteProduct, isAdmin, uploadProductImage, uploadGalleryImages, setupStorageBucket } from '../../integrations/supabase/admin';
 import { supabase } from '../../integrations/supabase/client';
 
@@ -28,26 +28,44 @@ const ProductManager: React.FC = () => {
   const [galleryUploadLoading, setGalleryUploadLoading] = useState(false);
   const [currentGalleryProductId, setCurrentGalleryProductId] = useState<string|null>(null);
   const [galleryPreviewUrls, setGalleryPreviewUrls] = useState<string[]>([]);
-  const [categories, setCategories] = useState<string[]>(['tp link', 'd link', 'Dahua']);
+  const [categories, setCategories] = React.useState<string[]>(() => {
+    const saved = localStorage.getItem('product_categories');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return ['tp link', 'd link', 'Dahua'];
+      }
+    }
+    return ['tp link', 'd link', 'Dahua'];
+  });
+
+  const persistCategories = (newCategories: string[]) => {
+    setCategories(newCategories);
+    localStorage.setItem('product_categories', JSON.stringify(newCategories));
+  };
+
+  const addCategory = (newCategory: string) => {
+    if (!categories.includes(newCategory)) {
+      const updated = [...categories, newCategory];
+      persistCategories(updated);
+    }
+  };
+
+  const editCategory = (oldCategory: string, newCategory: string) => {
+    if (newCategory.trim() === '' || categories.includes(newCategory)) return;
+    const updated = categories.map(cat => (cat === oldCategory ? newCategory : cat));
+    persistCategories(updated);
+  };
+
+  const removeCategory = (categoryToRemove: string) => {
+    const updated = categories.filter(cat => cat !== categoryToRemove);
+    persistCategories(updated);
+  };
 
   useEffect(() => {
     const checkAdminStatus = async () => {
       setLoading(true);
-      
-      // First check for hardcoded admin in localStorage (from AdminLogin)
-      const currentUser = localStorage.getItem('kimcom_current_user');
-      if (currentUser) {
-        try {
-          const parsedUser = JSON.parse(currentUser);
-          if (parsedUser.email === 'admin@kimcom.com') {
-            setIsAdminUser(true);
-            setLoading(false);
-            return;
-          }
-        } catch (e) {
-          // Handle parsing error silently
-        }
-      }
 
       // Then check for Supabase auth
       try {
@@ -60,10 +78,10 @@ const ProductManager: React.FC = () => {
       } catch (err) {
         console.error("Error checking admin status:", err);
       }
-      
+
       setLoading(false);
     };
-    
+
     checkAdminStatus();
 
     // Setup storage bucket if needed
@@ -82,7 +100,7 @@ const ProductManager: React.FC = () => {
       console.log("Skipping fetchAllProducts: isAdminUser =", isAdminUser, "loading =", loading);
       return; // Don't fetch if we're not admin or still checking
     }
-    
+
     try {
       setRefreshing(true);
       const fetchedProducts = await fetchProducts();
@@ -99,7 +117,7 @@ const ProductManager: React.FC = () => {
 
   useEffect(() => {
     fetchAllProducts();
-    
+
     // Set up realtime subscription for product changes
     const channel = supabase
       .channel('table-db-changes')
@@ -116,7 +134,7 @@ const ProductManager: React.FC = () => {
         }
       )
       .subscribe();
-    
+
     // Cleanup subscription
     return () => {
       supabase.removeChannel(channel);
@@ -126,6 +144,10 @@ const ProductManager: React.FC = () => {
   const handleAddProduct = async (productData: any) => {
     try {
       // Ensure user session is active
+      if (!isAdminUser) {
+        toast.error("You must be logged in as admin to add a product.");
+        return;
+      }
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -153,6 +175,10 @@ const ProductManager: React.FC = () => {
       toast.success("Product added successfully");
       setActiveTab("all");
       fetchAllProducts();
+      // Persist new category if added
+      if (productData.category && !categories.includes(productData.category)) {
+        addCategory(productData.category);
+      }
     } catch (e) {
       console.error("Error adding product:", e);
       toast.error("Failed to add product");
@@ -219,10 +245,22 @@ const ProductManager: React.FC = () => {
     }
   };
 
-  const handleDeleteSelected = () => {
-    setProducts(products.filter(product => !selectedProducts.includes(product.id)));
-    setSelectedProducts([]);
-    toast.success(`${selectedProducts.length} products deleted successfully`);
+  const handleDeleteSelected = async () => {
+    if (selectedProducts.length === 0) {
+      toast.error("No products selected for deletion");
+      return;
+    }
+    try {
+      for (const productId of selectedProducts) {
+        await deleteProduct(productId);
+      }
+      toast.success(`${selectedProducts.length} products deleted successfully`);
+      setSelectedProducts([]);
+      fetchAllProducts();
+    } catch (e) {
+      console.error("Error deleting selected products:", e);
+      toast.error("Failed to delete selected products");
+    }
   };
 
   const handleEditProduct = (product: Product) => {
@@ -477,7 +515,7 @@ const ProductManager: React.FC = () => {
                                     ))}
                                   </div>
                                   <Button
-                                    size="xs"
+                                    size="sm"
                                     className="mt-1 bg-kimcom-600 text-white"
                                     onClick={() => handleGalleryUpload(product)}
                                     disabled={galleryUploadLoading}
@@ -607,7 +645,7 @@ const ProductManager: React.FC = () => {
                 image: editingProduct.image,
                 brand: editingProduct.brand || '',
                 model: editingProduct.model || '',
-                features: editingProduct.features ? editingProduct.features.split('\n').filter((f: string) => f.trim()) : '',
+features: Array.isArray(editingProduct.features) ? editingProduct.features.join('\n') : (typeof editingProduct.features === 'string' ? editingProduct.features : ''),
                 difficulty: editingProduct.difficulty || 'Medium',
               }}
               categories={categories}

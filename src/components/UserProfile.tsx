@@ -1,10 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 import { User, Mail, Phone, MapPin, ShoppingBag, Package, CreditCard, MinusCircle, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { productsData } from '@/data/productsData';
+import { productsData } from '../data/productsData';
+import { getOrdersByUser, createOrder, OrderItem, generateOrderNumber } from '../integrations/supabase/orders';
+import { Badge } from '../components/ui/badge';
 
 interface UserProfileProps {
   userId?: string;
@@ -15,32 +16,61 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
   const [cartItems, setCartItems] = useState<{id: string, quantity: number}[]>([]);
   const [orderHistory, setOrderHistory] = useState<any[]>([]);
   const navigate = useNavigate();
+
+  // Helper function to safely format total
+  const formatTotal = (total: any): string => {
+    if (total == null || total === undefined) return 'N/A';
+    if (typeof total === 'number' && !isNaN(total)) return total.toLocaleString();
+    if (typeof total === 'string' && !isNaN(Number(total))) return Number(total).toLocaleString();
+    return 'N/A';
+  };
+
+  // Helper function to safely format date
+  const formatDate = (date: any): string => {
+    if (!date) return 'Unknown';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return 'Unknown';
+    return d.toLocaleDateString();
+  };
   
   useEffect(() => {
-    // If userId is provided, find that specific user
-    // Otherwise, get the current logged in user
-    const currentUser = localStorage.getItem('kimcom_current_user');
-    
-    if (currentUser) {
-      const userData = JSON.parse(currentUser);
+    let userData = null;
+    if (userId) {
+      // Try to load user data for the given userId from localStorage
+      const userKey = `kimcom_user_${userId}`;
+      const storedUser = localStorage.getItem(userKey);
+      if (storedUser) {
+        userData = JSON.parse(storedUser);
+      }
+    }
+    if (!userData) {
+      // Fallback to current logged in user
+      const currentUser = localStorage.getItem('kimcom_current_user');
+      if (currentUser) {
+        userData = JSON.parse(currentUser);
+      }
+    }
+    if (userData) {
       setUser(userData);
-      
+
       // Load user's cart
       const userCartKey = `kimcom_cart_${userData.id}`;
       const savedCart = localStorage.getItem(userCartKey);
       if (savedCart) {
         setCartItems(JSON.parse(savedCart));
       }
-      
-      // Load order history (if any)
-      const userOrdersKey = `kimcom_orders_${userData.id}`;
-      const savedOrders = localStorage.getItem(userOrdersKey);
-      if (savedOrders) {
-        setOrderHistory(JSON.parse(savedOrders));
+
+      // Load order history from supabase
+      async function fetchOrders() {
+        if (userData && userData.id) {
+          const orders = await getOrdersByUser(userData.id);
+          setOrderHistory(orders);
+        }
       }
+      fetchOrders();
     }
   }, [userId]);
-
+  
   // Save cart whenever it changes
   useEffect(() => {
     if (user) {
@@ -51,6 +81,39 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
       window.dispatchEvent(event);
     }
   }, [cartItems, user]);
+
+  // Function to submit order on payment confirmation
+  const submitOrder = async () => {
+    if (!user || cartItems.length === 0) return;
+
+    // Calculate total
+    const total = cartItems.reduce((sum, item) => {
+      const product = productsData.find(p => p.id === item.id);
+      return sum + (product?.price || 0) * item.quantity;
+    }, 0);
+
+    // Prepare order items
+    const orderItems: OrderItem[] = cartItems.map(item => ({
+      id: item.id,
+      quantity: item.quantity,
+    }));
+
+    const orderNumber = generateOrderNumber();
+    const storeId = 'default_store'; // Use a default store ID or adjust as needed
+    const newOrder = await createOrder(storeId, user.id, orderNumber, orderItems, total);
+    if (newOrder) {
+      toast.success('Order submitted successfully. Pending admin approval.');
+      // Clear cart and cache
+      setCartItems([]);
+      localStorage.removeItem(`kimcom_cart_${user.id}`);
+      localStorage.removeItem(`kimcom_orders_${user.id}`);
+      // Refresh order history
+      const orders = await getOrdersByUser(user.id);
+      setOrderHistory(orders);
+    } else {
+      toast.error('Failed to submit order. Please try again.');
+    }
+  };
 
   const handleRemoveFromCart = (id: string) => {
     const existingItem = cartItems.find(item => item.id === id);
@@ -133,12 +196,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
         <User className="h-16 w-16 text-white" />
       </div>
       <div className="p-6">
-        <h2 className="text-2xl font-semibold text-center mb-4">{user.fullName}</h2>
+        <h2 className="text-2xl font-semibold text-center mb-4">{user.fullName || 'No Name'}</h2>
         
         <div className="space-y-3">
           <div className="flex items-center">
             <Mail className="h-5 w-5 text-gray-400 mr-2" />
-            <span className="text-gray-700">{user.email}</span>
+            <span className="text-gray-700">{user.email || 'No Email'}</span>
           </div>
           
           <div className="flex items-center">
@@ -183,7 +246,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
                         />
                         <div>
                           <p className="font-medium text-sm">{item.name}</p>
-                          <p className="text-xs text-gray-500">KSh {item.price.toLocaleString()} × {item.quantity}</p>
+                          <p className="text-xs text-gray-500">KSh {formatTotal(item.price)} × {item.quantity}</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-1">
@@ -249,28 +312,35 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
         </div>
         
         {/* Order History Section */}
-        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="mt-6 pt-6 border-t border-gray-200">
           <h3 className="font-medium text-gray-900 mb-3">Order History</h3>
           {orderHistory.length > 0 ? (
             <div className="space-y-4">
               {orderHistory.map((order, index) => (
-                <div key={index} className="border rounded-md p-3">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Order #{order.id}</span>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      order.status === 'delivered' ? 'bg-green-100 text-green-800' : 
-                      order.status === 'processing' ? 'bg-blue-100 text-blue-800' : 
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                    </span>
+                order ? (
+                  <div key={index} className="border rounded-md p-3">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">Order #{order.id ? order.id.substring(0, 8) : 'N/A'}</span>
+                      <Badge
+                        className={`text-xs px-2 py-1 rounded-full ${
+                          order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                          order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                          order.status === 'refunded' ? 'bg-purple-100 text-purple-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : 'Unknown'}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      <p>Date: {formatDate(order.created_at)}</p>
+                      <p>Items: {order.items ? order.items.length : 0}</p>
+                      <p>Total: KSh {formatTotal(order.total_amount)}</p>
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-500 mt-1">
-                    <p>Date: {new Date(order.date).toLocaleDateString()}</p>
-                    <p>Items: {order.items.length}</p>
-                    <p>Total: KSh {order.total.toLocaleString()}</p>
-                  </div>
-                </div>
+                ) : null
               ))}
             </div>
           ) : (
@@ -292,7 +362,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
               <span className="mr-2">⚙️</span>
               Settings
             </Button>
-            <Button variant="outline" className="w-full justify-start" onClick={() => toast.info('Feature coming soon!')}>
+            <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/orders')}>
               <span className="mr-2">🛍️</span>
               View All Orders
             </Button>

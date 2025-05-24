@@ -1,60 +1,90 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect, useState } from 'react';
+import { fetchTotalRevenue, fetchTotalProducts, fetchTotalCustomers, fetchConversionRate, fetchProducts } from 'integrations/supabase/admin';
+import { Card, CardContent, CardHeader, CardTitle } from 'src/components/ui/card';
 import { BarChart2, Package, Users, DollarSign, ArrowUpRight, ArrowDownRight, ShoppingCart, TrendingUp } from 'lucide-react';
-import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltip } from 'src/components/ui/chart';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { useNavigate } from 'react-router-dom';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from 'src/components/ui/table';
+import { Button } from 'src/components/ui/button';
 import ContactMessages from './ContactMessages';
-
-const salesData = [
-  { name: 'Jan', sales: 4000, customers: 2400, amt: 2400 },
-  { name: 'Feb', sales: 3000, customers: 1398, amt: 2210 },
-  { name: 'Mar', sales: 2000, customers: 9800, amt: 2290 },
-  { name: 'Apr', sales: 2780, customers: 3908, amt: 2000 },
-  { name: 'May', sales: 1890, customers: 4800, amt: 2181 },
-  { name: 'Jun', sales: 2390, customers: 3800, amt: 2500 },
-  { name: 'Jul', sales: 3490, customers: 4300, amt: 2100 },
-];
-
-const topProducts = [
-  {
-    id: '1',
-    name: 'Wireless Keyboard',
-    price: 'KSh 4,500',
-    sales: 152,
-    stock: 24,
-    trend: 'up'
-  },
-  {
-    id: '2',
-    name: 'LED Monitor 24"',
-    price: 'KSh 18,900',
-    sales: 89,
-    stock: 12,
-    trend: 'up'
-  },
-  {
-    id: '3',
-    name: 'Ergonomic Mouse',
-    price: 'KSh 2,800',
-    sales: 74,
-    stock: 35,
-    trend: 'down'
-  },
-  {
-    id: '4',
-    name: 'USB-C Hub',
-    price: 'KSh 3,599',
-    sales: 67,
-    stock: 18,
-    trend: 'up'
-  },
-];
+import AdminNewOrdersByUser from './AdminNewOrdersByUser';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const [totalRevenue, setTotalRevenue] = useState<number | null>(null);
+  const [totalProducts, setTotalProducts] = useState<number | null>(null);
+  const [totalCustomers, setTotalCustomers] = useState<number | null>(null);
+  const [conversionRate, setConversionRate] = useState<number | null>(null);
+  const [topProducts, setTopProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      setError(null);
+      try {
+        const [
+          revenue,
+          productsCount,
+          customersCount,
+          convRate,
+          productsList
+        ] = await Promise.all([
+          fetchTotalRevenue(),
+          fetchTotalProducts(),
+          fetchTotalCustomers(),
+          fetchConversionRate(),
+          fetchProducts()
+        ]);
+
+        setTotalRevenue(revenue);
+        setTotalProducts(productsCount);
+        setTotalCustomers(customersCount);
+        setConversionRate(convRate);
+
+        const sortedProducts = productsList
+          .map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            price: p.price ? `KSh ${p.price}` : 'N/A',
+            sales: p.sales || 0,
+            stock: p.stock || 0,
+            trend: p.sales && p.sales > 50 ? 'up' : 'down'
+          }))
+          .sort((a, b) => b.sales - a.sales);
+
+        setTopProducts(sortedProducts.slice(0, 4));
+      } catch (err) {
+        setError('Failed to load dashboard data.');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">Loading dashboard data...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-600 p-4">{error}</div>;
+  }
+
+  // Sample data - replace with your actual data source
+  const salesData = [
+    { name: 'Jan', sales: 4000, customers: 2400 },
+    { name: 'Feb', sales: 3000, customers: 1398 },
+    { name: 'Mar', sales: 2000, customers: 9800 },
+    { name: 'Apr', sales: 2780, customers: 3908 },
+    { name: 'May', sales: 1890, customers: 4800 },
+    { name: 'Jun', sales: 2390, customers: 3800 },
+    { name: 'Jul', sales: 3490, customers: 4300 },
+  ];
 
   return (
     <div className="space-y-6">
@@ -75,7 +105,9 @@ const AdminDashboard: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">KSh 1,234,567</div>
+            <div className="text-2xl font-bold">
+              {totalRevenue !== null ? `KSh ${totalRevenue.toLocaleString()}` : 'N/A'}
+            </div>
             <div className="flex items-center text-xs text-green-600 mt-1">
               <ArrowUpRight className="mr-1 h-3 w-3" />
               <span>+12.5% from last month</span>
@@ -91,7 +123,9 @@ const AdminDashboard: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">128</div>
+            <div className="text-2xl font-bold">
+              {totalProducts !== null ? totalProducts : 'N/A'}
+            </div>
             <div className="flex items-center text-xs text-green-600 mt-1">
               <ArrowUpRight className="mr-1 h-3 w-3" />
               <span>+4 new products</span>
@@ -107,7 +141,9 @@ const AdminDashboard: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">573</div>
+            <div className="text-2xl font-bold">
+              {totalCustomers !== null ? totalCustomers : 'N/A'}
+            </div>
             <div className="flex items-center text-xs text-green-600 mt-1">
               <ArrowUpRight className="mr-1 h-3 w-3" />
               <span>+18.2% from last month</span>
@@ -123,7 +159,9 @@ const AdminDashboard: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3.2%</div>
+            <div className="text-2xl font-bold">
+              {conversionRate !== null ? `${conversionRate.toFixed(1)}%` : 'N/A'}
+            </div>
             <div className="flex items-center text-xs text-red-500 mt-1">
               <ArrowDownRight className="mr-1 h-3 w-3" />
               <span>-0.5% from last month</span>
@@ -217,7 +255,7 @@ const AdminDashboard: React.FC = () => {
             <Button 
               variant="outline" 
               className="w-full mt-4" 
-              onClick={() => navigate('/admin/products')}
+              onClick={() => navigate('/manage-7s8dF3k/products')}
             >
               <ShoppingCart className="mr-2 h-4 w-4" />
               Manage Products
@@ -225,6 +263,12 @@ const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* New Orders Section */}
+      <section className="mt-6 bg-white rounded-lg shadow p-6">
+        <h2 className="text-2xl font-bold mb-4">New Orders</h2>
+        <AdminNewOrdersByUser />
+      </section>
     </div>
   );
 };

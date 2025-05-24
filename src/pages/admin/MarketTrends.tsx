@@ -1,10 +1,10 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "components/ui/tabs";
+import { Button } from "components/ui/button";
+import { Badge } from "components/ui/badge";
+import { ChartContainer, ChartTooltip } from 'components/ui/chart';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, ChevronRight, FileText, BarChart2, PieChart as PieChartIcon, LineChart as LineChartIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -642,16 +642,13 @@ const MarketTrends: React.FC = () => {
                 </div>
               ))}
 
-              <Button variant="outline" className="w-full mt-2" onClick={() => navigate('/admin/statistics')}>
-                View Detailed Statistics
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
+              
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
   );
-};
+}
 
 export default MarketTrends;

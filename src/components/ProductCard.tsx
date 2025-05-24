@@ -1,10 +1,10 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from 'components/ui/button';
 import { ShoppingCart, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from 'components/ui/badge';
 
 interface ProductCardProps {
   id: string;

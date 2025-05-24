@@ -1,134 +1,45 @@
-
-import React, { useState } from 'react';
-import { useNavigate, Outlet, useLocation } from 'react-router-dom';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from '@/components/ui/sidebar';
-import { Home, Package, BarChart2, TrendingUp, Settings, LogOut, Shield, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Outlet } from 'react-router-dom';
 import { toast } from 'sonner';
-import AdminDashboard from '@/components/admin/AdminDashboard';
-import AdminSettings from '@/components/admin/AdminSettings';
+import { supabase } from 'integrations/supabase/client';
+import { isAdmin } from 'integrations/supabase/admin';
+import AdminLayout from 'components/admin/AdminLayout';
 
 const Admin: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [selectedItem, setSelectedItem] = useState(() => {
-    // Determine the selected item based on the current path
-    const path = location.pathname;
-    if (path.includes('products')) return 'products';
-    if (path.includes('statistics')) return 'statistics';
-    if (path.includes('market-trends')) return 'trends';
-    if (path.includes('settings')) return 'settings';
-    return 'dashboard';
-  });
-  
-  const handleNavigation = (path: string, item: string) => {
-    setSelectedItem(item);
-    navigate(path);
-  };
+  const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
 
-  const handleLogout = () => {
-    toast.success('Successfully logged out');
-    navigate('/');
-  };
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const hasRole = await isAdmin(session.user.id);
+        if (hasRole) {
+          setAuthenticated(true);
+          setLoading(false);
+          return;
+        }
+      }
+      setAuthenticated(false);
+      setLoading(false);
+      navigate('/manage-7s8dF3k/login');
+    };
+    checkAuth();
+  }, [navigate]);
 
-  // Determine what to render in the main content area
-  const renderContent = () => {
-    // For paths that match specific routes, we'll show the <Outlet> component
-    // which will render the nested route component
-    if (location.pathname !== '/admin' && location.pathname !== '/admin/dashboard') {
-      return <Outlet />;
-    }
-    
-    // For the admin dashboard or direct /admin path, show dashboard or settings based on selection
-    switch(selectedItem) {
-      case 'settings':
-        return <AdminSettings />;
-      case 'dashboard':
-      default:
-        return <AdminDashboard />;
-    }
-  };
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!authenticated) {
+    return null; // Redirect handled in useEffect
+  }
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gray-100">
-        <Sidebar>
-          <SidebarHeader className="border-b border-gray-200 p-4">
-            <div className="flex items-center space-x-2">
-              <Shield className="h-6 w-6 text-kimcom-600" />
-              <h1 className="text-xl font-bold">KimCom Admin</h1>
-            </div>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  isActive={selectedItem === 'dashboard'}
-                  onClick={() => handleNavigation('/admin/dashboard', 'dashboard')}
-                  tooltip="Dashboard"
-                >
-                  <Home className="h-5 w-5" />
-                  <span>Dashboard</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  isActive={selectedItem === 'products'}
-                  onClick={() => handleNavigation('/admin/products', 'products')}
-                  tooltip="Product Management"
-                >
-                  <Package className="h-5 w-5" />
-                  <span>Products</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  isActive={selectedItem === 'statistics'}
-                  onClick={() => handleNavigation('/admin/statistics', 'statistics')}
-                  tooltip="Website Statistics"
-                >
-                  <BarChart2 className="h-5 w-5" />
-                  <span>Statistics</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  isActive={selectedItem === 'trends'}
-                  onClick={() => handleNavigation('/admin/market-trends', 'trends')}
-                  tooltip="Market Trends"
-                >
-                  <TrendingUp className="h-5 w-5" />
-                  <span>Market Trends</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  isActive={selectedItem === 'settings'}
-                  onClick={() => handleNavigation('/admin/settings', 'settings')}
-                  tooltip="Settings"
-                >
-                  <Settings className="h-5 w-5" />
-                  <span>Settings</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarContent>
-          <SidebarFooter className="border-t border-gray-200 p-4">
-            <Button 
-              variant="ghost" 
-              className="w-full justify-start text-gray-500 hover:text-red-500"
-              onClick={handleLogout}
-            >
-              <LogOut className="h-5 w-5 mr-2" />
-              Log Out
-            </Button>
-          </SidebarFooter>
-        </Sidebar>
-        <div className="flex-grow p-6 overflow-auto">
-          {renderContent()}
-        </div>
-      </div>
-    </SidebarProvider>
+    <AdminLayout>
+      <Outlet />
+    </AdminLayout>
   );
 };
 

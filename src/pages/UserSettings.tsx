@@ -1,15 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import Navbar from '@/components/Navbar';
-import { supabase } from "@/integrations/supabase/client";
-import { Badge } from "@/components/ui/badge";
+import { supabase } from '@/integrations/supabase/client';
 
 const UserSettings: React.FC = () => {
   const navigate = useNavigate();
@@ -20,8 +18,8 @@ const UserSettings: React.FC = () => {
     email: '',
     phone: '',
     address: '',
+    password: '',
   });
-  const [orders, setOrders] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -51,18 +49,24 @@ const UserSettings: React.FC = () => {
         if (supabaseUser) {
           setUser(supabaseUser);
           
-          // Set known fields from auth user
+          // Fetch profile data from profiles table
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('full_name, phone, address')
+            .eq('id', supabaseUser.id)
+            .single();
+          
+          if (profileError && profileError.code !== 'PGRST116') { // Ignore no rows found error
+            console.error('Error fetching profile data:', profileError);
+          }
+          
           setFormData(prev => ({
             ...prev,
             email: supabaseUser.email || '',
-            // For the remaining fields, we'll use user_metadata if available
-            fullName: supabaseUser.user_metadata?.full_name || '',
-            phone: supabaseUser.user_metadata?.phone || '',
-            address: supabaseUser.user_metadata?.address || '',
+            fullName: profileData?.full_name || supabaseUser.user_metadata?.full_name || '',
+            phone: profileData?.phone || supabaseUser.user_metadata?.phone || '',
+            address: profileData?.address || supabaseUser.user_metadata?.address || '',
           }));
-          
-          // Note: We're not fetching from a "profiles" table since it doesn't exist yet
-          // If you want to add a profiles table, you would need to create it first with SQL
         } else {
           navigate('/login');
         }
@@ -74,23 +78,6 @@ const UserSettings: React.FC = () => {
     
     fetchUserData();
   }, [navigate]);
-
-  // Fetch order history if we had an orders table
-  useEffect(() => {
-    const fetchOrders = async () => {
-      if (user?.id) {
-        try {
-          // This would fetch from an orders table if it existed
-          // For now, return mock data
-          setOrders([]);
-        } catch (error) {
-          console.error('Error fetching orders:', error);
-        }
-      }
-    };
-    
-    fetchOrders();
-  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -120,8 +107,20 @@ const UserSettings: React.FC = () => {
         } 
         // If using Supabase auth
         else if (user.id) {
+          // Update profiles table
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: user.id,
+              full_name: formData.fullName,
+              phone: formData.phone,
+              address: formData.address,
+              updated_at: new Date().toISOString(),
+            });
+          if (profileError) throw profileError;
+
           // Update user_metadata in Supabase Auth
-          const { error } = await supabase.auth.updateUser({
+          const { error: authError } = await supabase.auth.updateUser({
             data: {
               full_name: formData.fullName,
               phone: formData.phone,
@@ -129,7 +128,7 @@ const UserSettings: React.FC = () => {
             }
           });
           
-          if (error) throw error;
+          if (authError) throw authError;
         }
         
         toast.success('Profile updated successfully');
@@ -137,6 +136,31 @@ const UserSettings: React.FC = () => {
     } catch (error) {
       toast.error('Failed to update profile');
       console.error('Error updating profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (user.email && user.email.includes('@kimcom.com')) {
+      toast.info("Password change not available for demo accounts");
+      return;
+    }
+    if (!formData.password) {
+      toast.error("Please enter a new password");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: formData.password,
+      });
+      if (error) throw error;
+      toast.success("Password updated successfully");
+      setFormData(prev => ({ ...prev, password: '' }));
+    } catch (error) {
+      toast.error("Failed to update password");
+      console.error("Error updating password:", error);
     } finally {
       setLoading(false);
     }
@@ -236,51 +260,23 @@ const UserSettings: React.FC = () => {
               
               <Card>
                 <CardHeader>
-                  <CardTitle>Order History</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {orders.length > 0 ? (
-                    <div className="space-y-4">
-                      {orders.map((order) => (
-                        <div key={order.id} className="border rounded-md p-4">
-                          <div className="flex justify-between mb-2">
-                            <div>
-                              <p className="font-medium">Order #{order.id.substring(0, 8)}</p>
-                              <p className="text-sm text-gray-500">{new Date(order.created_at).toLocaleDateString()}</p>
-                            </div>
-                            <Badge>{order.status}</Badge>
-                          </div>
-                          <p className="font-medium">KSh {order.total.toLocaleString()}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center p-6 border border-dashed rounded-md">
-                      <p className="text-muted-foreground mb-2">No orders yet</p>
-                      <Button variant="outline" onClick={() => navigate('/products')}>
-                        Browse Products
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
                   <CardTitle>Password & Security</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="New password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    disabled={loading}
+                  />
                   <Button 
                     variant="outline" 
                     className="w-full sm:w-auto" 
-                    onClick={() => {
-                      if (user.email && user.email.includes('@kimcom.com')) {
-                        toast.info("Password change not available for demo accounts");
-                      } else {
-                        // Implement password reset for real users
-                        toast.info("Password reset link will be sent to your email");
-                      }
-                    }}
+                    onClick={handleChangePassword}
+                    disabled={loading}
                   >
                     Change Password
                   </Button>

@@ -1,19 +1,21 @@
-import React from "react";
-import Navbar from "@/components/Navbar";
-import Hero from "@/components/Hero";
-import ServiceCard from "@/components/ServiceCard";
-import ProductCard from "@/components/ProductCard";
-import TestimonialCard from "@/components/TestimonialCard";
-import CTASection from "@/components/CTASection";
-import Footer from "@/components/Footer";
-import { Button } from "@/components/ui/button";
+import React, { useEffect, useState } from "react";
+import Navbar from "components/Navbar";
+import Hero from "components/Hero";
+import ServiceCard from "components/ServiceCard";
+import ProductCard from "components/ProductCard";
+import TestimonialCard from "components/TestimonialCard";
+import CTASection from "components/CTASection";
+import Footer from "components/Footer";
+import { Button } from "components/ui/button";
 import { Camera, Settings, Wifi, ShieldCheck, Server, Network, ArrowRight, Package } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { productsData } from '@/data/productsData';
+import { fetchProducts } from "integrations/supabase/admin";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Sample service data
   const services = [{
@@ -38,26 +40,40 @@ const Index = () => {
     icon: ShieldCheck
   }];
 
-  // Get featured products (first 4) from our shared products data
-  const featuredProducts = productsData.slice(0, 4);
-
   // Sample testimonial data
   const testimonials = [{
     content: "KimCom Solutions provided excellent service when installing our office security system. Professional, efficient, and knowledgeable team!",
-    author: "Sarah Johnson",
+    author: "Sarah Odhiambo",
     role: "Office Manager",
     rating: 5
   }, {
     content: "We've been using their maintenance service for our CCTV system for years. Always reliable and quick to respond to any issues.",
-    author: "Michael Chen",
+    author: "Rita Mutua",
     role: "Store Owner",
     rating: 5
   }, {
     content: "The network setup they did for our home office is amazing. Great WiFi coverage and the security features give us peace of mind.",
-    author: "Jennifer Martinez",
+    author: "Kelvin Momanyi",
     role: "Remote Professional",
     rating: 4
   }];
+
+  useEffect(() => {
+    const loadFeaturedProducts = async () => {
+      try {
+        const products = await fetchProducts();
+        const featured = products.filter(p => p.featured);
+        setFeaturedProducts(featured);
+      } catch (error) {
+        console.error("Failed to load featured products:", error);
+        toast.error("Could not load featured products. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFeaturedProducts();
+  }, []);
 
   const handleViewDetails = (id: string) => {
     navigate(`/product-details/${id}`);
@@ -69,28 +85,20 @@ const Index = () => {
     const cartItems = existingCart ? JSON.parse(existingCart) : [];
 
     // Check if product already in cart
-    const existingItem = cartItems.find((item: {
-      id: string;
-    }) => item.id === id);
+    const existingItem = cartItems.find((item: { id: string }) => item.id === id);
     if (existingItem) {
       // Increment quantity if already in cart
-      const updatedCart = cartItems.map((item: {
-        id: string;
-        quantity: number;
-      }) => item.id === id ? {
-        ...item,
-        quantity: item.quantity + 1
-      } : item);
+      const updatedCart = cartItems.map((item: { id: string; quantity: number }) => 
+        item.id === id ? { ...item, quantity: item.quantity + 1 } : item
+      );
       localStorage.setItem('cartItems', JSON.stringify(updatedCart));
     } else {
       // Add new item to cart
-      const updatedCart = [...cartItems, {
-        id,
-        quantity: 1
-      }];
+      const updatedCart = [...cartItems, { id, quantity: 1 }];
       localStorage.setItem('cartItems', JSON.stringify(updatedCart));
     }
-    const product = productsData.find(p => p.id === id);
+    
+    const product = featuredProducts.find(p => p.id === id);
     toast.success(`Added ${product?.name} to cart`);
   };
 
@@ -113,11 +121,24 @@ const Index = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {services.map(service => <ServiceCard key={service.id} title={service.title} description={service.description} icon={service.icon} />)}
+              {services.map(service => (
+                <ServiceCard 
+                  key={service.id} 
+                  title={service.title} 
+                  description={service.description} 
+                  icon={service.icon} 
+                  buttonText=""
+                />
+              ))}
             </div>
 
             <div className="mt-16 text-center">
-              <Button variant="outline" size="lg" className="border-kimcom-200 text-kimcom-700 hover:bg-kimcom-50" onClick={() => navigate('/services')}>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="border-kimcom-200 text-kimcom-700 hover:bg-kimcom-50" 
+                onClick={() => navigate('/services')}
+              >
                 View All Services
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
@@ -130,13 +151,19 @@ const Index = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
-                <img alt="Security professionals installing CCTV" className="rounded-xl shadow-xl" src="/lovable-uploads/ed271c59-d2fa-4603-a4f3-a98005dc8b9c.jpg" />
+                <img 
+                  alt="Security professionals installing CCTV" 
+                  className="rounded-xl shadow-xl" 
+                  src="/lovable-uploads/ed271c59-d2fa-4603-a4f3-a98005dc8b9c.jpg" 
+                />
               </div>
               <div>
                 <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-6">
                   Why Choose KimCom Solutions?
                 </h2>
-                <p className="text-lg text-gray-600 mb-8">With over 6 years of experience in the security industry, we're committed to providing top-quality products and services tailored to your specific needs.</p>
+                <p className="text-lg text-gray-600 mb-8">
+                  With over 6 years of experience in the security industry, we're committed to providing top-quality products and services tailored to your specific needs.
+                </p>
                 
                 <div className="space-y-4">
                   <div className="flex items-start">
@@ -202,12 +229,47 @@ const Index = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {featuredProducts.map(product => <ProductCard key={product.id} id={product.id} name={product.name} description={product.description} price={product.price} image={product.image} category={product.category} difficulty={product.difficulty} stock={product.stock} onViewDetails={() => handleViewDetails(product.id)} onAddToCart={() => handleAddToCart(product.id)} />)}
-            </div>
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {[...Array(4)].map((_, index) => (
+                  <div key={index} className="bg-white rounded-lg shadow-md p-4 animate-pulse">
+                    <div className="bg-gray-200 h-48 rounded-md mb-4"></div>
+                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                    <div className="flex space-x-2">
+                      <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                      <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {featuredProducts.map(product => (
+                  <ProductCard
+                    key={product.id}
+                    id={product.id}
+                    name={product.name}
+                    description={product.description}
+                    price={product.price}
+                    image={product.image}
+                    category={product.category}
+                    difficulty={product.difficulty}
+                    stock={product.stock}
+                    onViewDetails={() => handleViewDetails(product.id)}
+                    onAddToCart={() => handleAddToCart(product.id)}
+                  />
+                ))}
+              </div>
+            )}
 
             <div className="mt-16 text-center">
-              <Button className="bg-kimcom-600 hover:bg-kimcom-700" size="lg" onClick={() => navigate('/products')}>
+              <Button 
+                className="bg-kimcom-600 hover:bg-kimcom-700" 
+                size="lg" 
+                onClick={() => navigate('/products')}
+              >
                 View All Products
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
@@ -226,30 +288,30 @@ const Index = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {testimonials.map((testimonial, index) => <TestimonialCard key={index} content={testimonial.content} author={testimonial.author} role={testimonial.role} rating={testimonial.rating} />)}
+              {testimonials.map((testimonial, index) => (
+                <TestimonialCard 
+                  key={index}
+                  content={testimonial.content}
+                  author={testimonial.author}
+                  role={testimonial.role}
+                  rating={testimonial.rating}
+                />
+              ))}
             </div>
           </div>
         </section>
 
         {/* CTA Section */}
-        <CTASection title="Ready to secure your space?" description="Contact us today for a free consultation and quote on your security system needs." primaryButtonText="Request a Quote" secondaryButtonText="Call Us Now" bgColor="bg-kimcom-800" />
+        <CTASection 
+          title="Ready to secure your space?" 
+          description="Contact us today for a free consultation and quote on your security system needs." 
+          primaryButtonText="" 
+          secondaryButtonText="Call Us Now" 
+          bgColor="bg-kimcom-800" 
+        />
 
-        {/* GALLERY SUBHEADING SECTION */}
-        <section id="gallery" className="py-16 bg-gray-50">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold mb-4 text-kimcom-700">Gallery</h2>
-            <p className="text-gray-600 mb-6">See our onsite project photos and recent work updates. <span className="font-medium text-kimcom-600">Admins can add & manage photos here.</span></p>
-            {/* Placeholder: later can map uploaded gallery images here */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="aspect-w-4 aspect-h-3 bg-gray-200 rounded-lg animate-pulse" />
-              <div className="aspect-w-4 aspect-h-3 bg-gray-200 rounded-lg animate-pulse" />
-              <div className="aspect-w-4 aspect-h-3 bg-gray-200 rounded-lg animate-pulse" />
-            </div>
-            <div className="mt-4 text-center text-sm text-gray-400">
-              <span>Want to see more? <b>Admin</b> can upload onsite images on the gallery via the admin dashboard.</span>
-            </div>
-          </div>
-        </section>
+        {/* Gallery Section */}
+       
       </main>
 
       <Footer />

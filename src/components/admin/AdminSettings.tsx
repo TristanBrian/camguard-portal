@@ -1,18 +1,19 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "components/ui/tabs";
+import { Button } from "components/ui/button";
+import { Input } from "components/ui/input";
+import { Label } from "components/ui/label";
+import { Switch } from "components/ui/switch";
+import { Separator } from "components/ui/separator";
+import { Textarea } from "components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "components/ui/select";
 import { AlertCircle, CheckCircle2, Lock, Mail, ShieldCheck, User, Globe, Bell, LogOut, Smartphone, Users, Trash2, FileText, Download, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "components/ui/badge";
 import { useNavigate } from 'react-router-dom';
+import { supabase } from 'src/integrations/supabase/client';
 
 const AdminSettings: React.FC = () => {
   const navigate = useNavigate();
@@ -21,8 +22,8 @@ const AdminSettings: React.FC = () => {
   // General settings
   const [generalSettings, setGeneralSettings] = useState({
     storeName: "KimCom Electronics",
-    email: "admin@kimcom.com",
-    phone: "+254 123 456 789",
+    email: "kimcomengineering@gmail.com",
+    phone: "+254 740 213 382",
     address: "Nairobi, Kenya",
     currency: "KSH",
     language: "English",
@@ -53,7 +54,7 @@ const AdminSettings: React.FC = () => {
     fullName: "Admin User",
     email: "admin@kimcom.com",
     role: "Super Admin",
-    joinDate: "Jan 12, 2023",
+    joinDate: "May 24, 2025",
     lastLogin: "Today at 8:45 AM",
     avatar: "/placeholder.svg"
   });
@@ -131,7 +132,7 @@ const AdminSettings: React.FC = () => {
     }, 1000);
   };
 
-  const changePassword = () => {
+  const changePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       toast.error("All password fields are required");
       return;
@@ -148,15 +149,23 @@ const AdminSettings: React.FC = () => {
     }
 
     setLoading(true);
-    // Simulating API call
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (error) {
+        throw error;
+      }
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
       setPasswordStrength(0);
       toast.success("Password changed successfully");
-    }, 1500);
+    } catch (error: any) {
+      toast.error(`Failed to update password: ${error.message || error}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const enableTwoFactor = () => {

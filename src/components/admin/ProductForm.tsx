@@ -37,6 +37,8 @@ const productFormSchema = z.object({
   model: z.string().optional(),
   features: z.string().optional(),
   difficulty: z.enum(['Easy', 'Medium', 'Advanced']).optional(),
+  slug: z.string().optional(),
+  warranty_months: z.string().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -256,7 +258,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                       <FormItem>
                         <FormLabel>SKU</FormLabel>
                         <FormControl>
-                          <Input placeholder="SKU-123" {...field} />
+                          <Input placeholder="Serial-No" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -345,6 +347,35 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   )}
                 />
               </div>
+              
+              {/* Image Upload Section */}<FormField
+  control={form.control}
+  name="slug"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Slug</FormLabel>
+      <FormControl>
+        <Input placeholder="Enter simplified version of product" {...field} />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
+<FormField
+  control={form.control}
+  name="warranty_months"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Warranty (Months)</FormLabel>
+      <FormControl>
+        <Input placeholder="12" type="number" {...field} />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
               
               <div className="w-full md:w-1/2 flex flex-col gap-4">
                 <div>
