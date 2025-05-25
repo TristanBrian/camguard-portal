@@ -3,7 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { Button } from 'components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, ShieldCheck, ShoppingCart, Phone, Lock, User, UserCircle2, LogOut } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
+// import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '../hooks/use-mobile';
+import { supabase } from '../integrations/supabase/client';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -69,8 +71,12 @@ const Navbar = () => {
   const handleCallButton = () => {
     window.location.href = 'tel:0740213382';
   };
-
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
     localStorage.removeItem('kimcom_current_user');
     setCurrentUser(null);
     navigate('/');
@@ -81,11 +87,15 @@ const Navbar = () => {
   };
 
   const handleCartClick = () => {
-    navigate('/checkout');
-    // Trigger cart popover to open via localStorage
-    localStorage.setItem('open_cart_popover', 'true');
-    // Force update of cart count
-    updateCartCount();
+    if (!currentUser) {
+      navigate('/login');
+    } else {
+      navigate('/checkout');
+      // Trigger cart popover to open via localStorage
+      localStorage.setItem('open_cart_popover', 'true');
+      // Force update of cart count
+      updateCartCount();
+    }
   };
 
   // Helper function to safely get the first name
